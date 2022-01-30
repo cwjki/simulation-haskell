@@ -10,16 +10,6 @@
   (major1) == 0 && (major2) <  1 || \
   (major1) == 0 && (major2) == 1 && (minor) <= 0)
 #endif /* MIN_VERSION_Simulation_Haskell */
-/* package Simulation-Haskell-0.1.0.0 */
-#ifndef VERSION_Simulation_Haskell
-#define VERSION_Simulation_Haskell "0.1.0.0"
-#endif /* VERSION_Simulation_Haskell */
-#ifndef MIN_VERSION_Simulation_Haskell
-#define MIN_VERSION_Simulation_Haskell(major1,major2,minor) (\
-  (major1) <  0 || \
-  (major1) == 0 && (major2) <  1 || \
-  (major1) == 0 && (major2) == 1 && (minor) <= 0)
-#endif /* MIN_VERSION_Simulation_Haskell */
 /* package base-4.14.3.0 */
 #ifndef VERSION_base
 #define VERSION_base "4.14.3.0"
@@ -122,8 +112,11 @@
   (major1) == 2 && (major2) == 34 && (minor) <= 0)
 #endif /* MIN_TOOL_VERSION_strip */
 
+#ifndef CURRENT_PACKAGE_KEY
+#define CURRENT_PACKAGE_KEY "Simulation-Haskell-0.1.0.0-inplace"
+#endif /* CURRENT_packageKey */
 #ifndef CURRENT_COMPONENT_ID
-#define CURRENT_COMPONENT_ID "Simulation-Haskell-0.1.0.0-inplace-Simulation-Haskell"
+#define CURRENT_COMPONENT_ID "Simulation-Haskell-0.1.0.0-inplace"
 #endif /* CURRENT_COMPONENT_ID */
 #ifndef CURRENT_PACKAGE_VERSION
 #define CURRENT_PACKAGE_VERSION "0.1.0.0"
