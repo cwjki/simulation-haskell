@@ -1,6 +1,7 @@
 module Utils where 
 
 import System.Random
+import Types
 
 
 randomGen :: Int -> Int -> StdGen -> (Int, StdGen)
@@ -17,16 +18,15 @@ printBoard (row : rows) = do
 
 
 printBoardAux :: Board -> Int -> Int -> [[Char]]
-prinBoardAux board index rows
+printBoardAux board index rows
     | index == rows = [""]
-    | otherwise = ["", printRows (getRow board index)] ++ printBoardAux board (index+1)
+    | otherwise = ["", printRow (getRow board index)] ++ printBoardAux board (index+1) rows
 
 printRow :: [[CellType]] -> [Char]
 printRow [] = ""
-printRow (cellType : cellTypes)
-    | null cellType = "" ++ printRow cellTypes
-    | otherwise = "" ++ [celltype, " "] ++ printRow cellTypes
+printRow (cellType : cellTypes) = "" ++ show cellType ++ printRow cellTypes
 
 
 
 
+drawRow :: Board -> Int -> Int -> 
