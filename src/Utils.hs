@@ -1,5 +1,6 @@
 module Utils
     ( printBoard
+    , randomGen
     ) where
 
 import           System.Random
@@ -8,6 +9,22 @@ import           Types
 
 randomGen :: Int -> Int -> StdGen -> (Int, StdGen)
 randomGen min max = randomR (min, max)
+
+
+
+replace :: [a] -> Int -> a -> [a]
+replace list index element =
+    let (first, x : xs) = splitAt index list in first ++ (element : xs)
+
+-- replace a Cell on the Board
+replaceCell :: Cell -> Board -> Board
+replaceCell (cellType, (row, column)) board =
+    replace board row (replace (board !! row) column (cellType, (row, column)))
+
+-- given a list of Cells update the Board
+replaceCellList :: [Cell] -> Board -> Board 
+replaceCellList [] board = board
+replaceCellList ((cellType, (row, column)) : t) board = replaceCellList t (replace board row (replace (board !! row) column (cellType, (row, column))))
 
 
 
