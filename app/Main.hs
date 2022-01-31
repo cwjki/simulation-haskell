@@ -8,7 +8,7 @@ n :: Int
 n = 10
 
 m :: Int
-m = 10
+m = 5
 
 robots :: Int
 robots = 2
