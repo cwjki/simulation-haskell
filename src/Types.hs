@@ -8,9 +8,9 @@ data CellType = Empty | Kid | Obstacle | Corral | Dirt
 
 type Position = (Int, Int)
 
-type BoardCell = (CellType, Position)
+type Cell = (CellType, Position)
 
-type Board = [[BoardCell]]
+type Board = [[Cell]]
 
 
 instance Show CellType where
@@ -28,27 +28,54 @@ instance Show CellType where
 
 
 
--- BoardCell
-getCellType :: BoardCell -> CellType
+-- Cell
+
+getCell :: Board -> Int -> Int -> Cell
+getCell board row column = board !! row !! column
+
+getCellType :: Cell -> CellType
 getCellType (cellType, position) = cellType
 
-getPosition :: BoardCell -> Position
+getPosition :: Cell -> Position
 getPosition (cellType, position) = position
 
-getX :: BoardCell -> Int
-getX (celltype, position) = fst position
+getCellRow :: Cell -> Int
+getCellRow (celltype, position) = fst position
 
-getY :: BoardCell -> Int
-getY (celltype, position) = snd position
+getCellColumn :: Cell -> Int
+getCellColumn (celltype, position) = snd position
+
+
 
 -- Board
-getRowByIndex :: Board -> Int -> Int -> [BoardCell]
+
+-- return a list of cells with the desired cellType
+filterByCellType :: CellType -> Board -> [Cell]
+filterByCellType cellType board = filterByCellTypeRow cellType board 0 (length (head board))
+
+filterByCellTypeRow :: CellType -> Board -> Int -> Int -> [Cell]
+filterByCellTypeRow cellType board row rowLength
+    | row == rowLength = []
+    | otherwise = filterByCellTypeColumn cellType board row 0 (length board) ++ filterByCellTypeRow cellType board (row+1) rowLength
+
+filterByCellTypeColumn :: CellType -> Board -> Int -> Int -> Int -> [Cell]
+filterByCellTypeColumn cellType board row column columnLength
+    | column == columnLength = []
+    | getCellType (getCell board row column) == cellType = getCell board row column : filterByCellTypeColumn cellType board row (column+1) columnLength
+    | otherwise = filterByCellTypeColumn cellType board row (column+1) columnLength
+
+
+
+
+-- return the i-th row 
+getRowByIndex :: Board -> Int -> Int -> [Cell]
 getRowByIndex board columns index = getRowByIndexAux board columns index 0
 
-getRowByIndexAux :: Board -> Int -> Int -> Int -> [BoardCell]
+getRowByIndexAux :: Board -> Int -> Int -> Int -> [Cell]
 getRowByIndexAux board columns index i
     | i == columns = []
-    | otherwise = (board !! index !! i) : getRowByIndexAux board columns index (i+1)
+    | otherwise = (board !! index !! i)
+    : getRowByIndexAux board columns index (i + 1)
 
 
 

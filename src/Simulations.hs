@@ -1,30 +1,45 @@
-module Simulations (simulate) where
+module Simulations
+    ( simulate
+    ) where
 
-import Types
-import System.Random
+import System.Random ()
+import Types ( Board, CellType(Empty), Cell )
+import Utils (drawBoard)
 
 
 simulate :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> IO ()
-simulate n m robots kids obstacles dirt seed = do 
+simulate n m robots kids obstacles dirt seed = do
+    let board = generateBoard n m robots kids obstacles dirt seed
+    print board
     putStrLn "FIN"
-    putStrLn "---------------------------------------------------------------------------------------"
+    putStrLn
+        "---------------------------------------------------------------------------------------"
+    drawBoard board
+
+
+
+generateBoard :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Board
+generateBoard n m robots kids obstacles dirt seed = board where 
+    board = generateEmptyBoard n m
     
 
 
 
 generateEmptyBoard :: Int -> Int -> Board
-generate_board n m = generateRows n m 0
+generateEmptyBoard n m = generateEmptyRows n m 0
 
 
-generateRows :: Int -> Int -> Int -> Board
-generateRows rows columns row
+generateEmptyRows :: Int -> Int -> Int -> Board
+generateEmptyRows rows columns row
     | row == rows = []
-    | otherwise = [generateColumns rows columns row 0 : generateRows rows columns (row+1)] 
+    | otherwise = generateEmptyColumns columns row 0
+    : generateEmptyRows rows columns (row + 1)
 
-generateColumns :: Int -> Int -> Int -> [BoardCell]
-generateColumns rows columns row column 
+generateEmptyColumns :: Int -> Int -> Int -> [Cell]
+generateEmptyColumns columns row column
     | column == columns = []
-    | otherwise = [(Empty, (row, column)) : generateColumns rows columns row (column+1)]
+    | otherwise = (Empty, (row, column))
+    : generateEmptyColumns columns row (column + 1)
 
 -- generate_board :: Int -> Int -> Int -> Int -> Int -> Int -> Board
 -- generate_board n m robots kids obstacles dirt = board where
