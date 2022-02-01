@@ -66,17 +66,3 @@ replaceCellList ((cellType, (row, column)) : t) board = replaceCellList t (repla
 
 
 
-
-
-
--- printBoardAux :: Board -> Int -> Int -> [[Char]]
--- printBoardAux board index rows
---     | index == rows = [""]
---     | otherwise = ["", printRow (getRowByIndex board Int Int board index)] ++ printBoardAux board (index+1) rows
-
--- printRow :: [[CellType]] -> [Char]
--- printRow [] = ""
--- printRow (cellType : cellTypes) = "" ++ show cellType ++ printRow cellTypes
-
-
-
