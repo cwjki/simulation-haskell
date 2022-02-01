@@ -2,12 +2,16 @@
 module Types (
     Board, CellType(Empty, Corral, Kid, Obstacle, Dirt, Robot), Cell,
     filterByCellType,
-    getEmptyAdjacentCells
-
+    getEmptyAdjacentCells,
+    getCellRow,
+    getCellColumn,
+    getFirtsEmptyCell
     )
     where
 
 import Debug.Trace
+import System.Random (StdGen)
+
 
 data CellType = Empty | Kid | Obstacle | Corral | Dirt
                 | Robot | RobotKid | RobotDirt | RobotCorral
@@ -109,6 +113,30 @@ getRowByIndexAux board columns index i
     | i == columns = []
     | otherwise = (board !! index !! i)
     : getRowByIndexAux board columns index (i + 1)
+
+
+-- Kid 
+
+
+getFirtsEmptyCell :: Board -> Cell -> Int -> Int -> Cell 
+getFirtsEmptyCell board (cellType, (row, column)) dirRow dirCol =
+    let rowLength = length board
+        columnLength = length (head board)
+        destinyRow = row + dirRow
+        destinyColumn  = column + dirCol 
+        emptyCell 
+            | destinyRow < 0 || destinyRow >= rowLength || destinyColumn < 0 || destinyColumn >= columnLength = board !! row !! column
+            | getCellType(board !! destinyRow !! destinyColumn) == Empty = board !! destinyRow !! destinyColumn
+            | getCellType(board !! destinyRow !! destinyColumn) == Obstacle = getFirtsEmptyCell board (board !! destinyRow !! destinyColumn) dirRow dirCol
+            | otherwise = board !! row !! column
+    in emptyCell
+
+
+
+
+
+
+
 
 
 

@@ -98,3 +98,32 @@ generateStuff board cellType count seed
           (_     , (row, column)) = emptyCells !! rIndex
           newBoard                = replaceCell (cellType, (row, column)) board
       in  generateStuff newBoard cellType (count - 1) newSeed
+
+
+
+moveKids :: Board -> StdGen -> Board
+moveKids board seed = 
+    let kids = filterByCellType Kid board
+
+
+_moveKids :: Board -> [Cell] -> StdGen -> Board
+_moveKids board [] _ = board
+_moveKids board (kidCell : t) seed = 
+    let (kidStay, newSeed) = randomGen 0 2 seed 
+        newBoard 
+            | kidStay == 1 = board
+            | otherwise = 
+                let possibleCells = getAdjacentCells kidCell board
+                    (rIndex, newSeed) = randomGen 0 length (possibleCells -1) seed
+                    choosenCell = possibleCells !! rIndex
+                    boardAux 
+                        | getCellType choosenCell == Empty || Obstacle = 
+                            let rowDir = getCellRow choosenCell - getCellRow kidCell
+                                colDir = getCellColumn choosenCell - getCellColumn kidCell
+                                destinyCell = getFirtsEmptyCell board choosenCell rowDir colDor
+
+
+                        | otherwise = board
+
+
+
