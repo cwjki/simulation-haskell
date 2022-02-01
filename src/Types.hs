@@ -1,4 +1,11 @@
-module Types where
+
+module Types (
+    Board, CellType(Empty, Corral), Cell,
+    filterByCellType, 
+    getAdjacentCellsList
+
+    )
+    where
 
 
 data CellType = Empty | Kid | Obstacle | Corral | Dirt
@@ -45,6 +52,27 @@ getCellRow (celltype, position) = fst position
 getCellColumn :: Cell -> Int
 getCellColumn (celltype, position) = snd position
 
+getAdjacentCells :: Cell -> Board -> [Cell]
+getAdjacentCells (cellType, (row, column)) board = adjacentCells where
+    rowLength = length board
+    columnLength = length board
+    up = [board !! (row-1) !! column | row /= 0]
+    left = [board !! row !! (column - 1) | column /= 0]
+    down = [board !! (row+1) !! column | row /= (rowLength-1)]
+    rigth = [board !! row !! (column+1) | column /= (columnLength-1)]
+
+    adjacentCells = up ++ left ++ down ++ rigth
+
+getAdjacentCellsList :: [Cell] -> Board -> [Cell]
+getAdjacentCellsList cells board
+    | null cells = []
+    | otherwise  = getAdjacentCells (head cells) board ++ getAdjacentCellsList (tail cells) board
+
+
+getEmptyAdjacentCells :: [Cell] -> Board -> [Cell]
+getEmptyAdjacentCells cells board = result where
+    adjacentCells = getAdjacentCellsList cells board
+    result = filterByCellTypeList Empty adjacentCells
 
 
 -- Board
@@ -64,6 +92,11 @@ filterByCellTypeColumn cellType board row column columnLength
     | getCellType (getCell board row column) == cellType = getCell board row column : filterByCellTypeColumn cellType board row (column+1) columnLength
     | otherwise = filterByCellTypeColumn cellType board row (column+1) columnLength
 
+filterByCellTypeList :: CellType -> [Cell] -> [Cell]
+filterByCellTypeList _ [] = []
+filterByCellTypeList cellType (h : t)
+    | getCellType h == cellType = h : filterByCellTypeList cellType t
+    | otherwise = filterByCellTypeList cellType t
 
 
 
