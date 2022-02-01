@@ -1,6 +1,6 @@
 
 module Types (
-    Board, CellType(Empty, Corral), Cell,
+    Board, CellType(Empty, Corral, Kid, Obstacle, Dirt, Robot), Cell,
     filterByCellType,
     getEmptyAdjacentCells
 

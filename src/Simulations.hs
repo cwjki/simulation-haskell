@@ -8,7 +8,7 @@ import           System.Random                  ( StdGen
                                                 )
 import           Types                          ( Board
                                                 , Cell
-                                                , CellType(Empty, Corral)
+                                                , CellType(Empty, Corral, Kid, Obstacle, Robot, Dirt)
                                                 , filterByCellType
                                                 , getEmptyAdjacentCells
                                                 )
@@ -31,10 +31,10 @@ simulate n m robots kids obstacles dirt seed = do
 
 
 generateBoard :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Board
-generateBoard n m robots kids obstacles dirt seed = board where 
-    randomSeed = mkStdGen seed
+generateBoard n m robots kids obstacles dirt seed = board where  
     emptyBoard = generateEmptyBoard n m
-    board = generateCorrals emptyBoard kids randomSeed
+    corralBoard = generateCorrals emptyBoard kids (mkStdGen seed)
+    board = generateKids corralBoard kids (mkStdGen (seed+5))
 
 
 
@@ -76,7 +76,16 @@ generateCorrals board corralCount seed
         in generateCorrals newBoard (corralCount-1) newSeed
 
 
-
+-- generate Kids
+generateKids :: Board -> Int -> StdGen -> Board
+generateKids board kidsCount seed 
+    | kidsCount == 0 = board 
+    | otherwise = 
+        let emptyCells = filterByCellType Empty board
+            (rIndex, newSeed) = randomGen 0 (length emptyCells -1) seed
+            (_ ,(row, column)) = emptyCells !! rIndex
+            newBoard = replaceCell (Kid, (row, column)) board
+        in generateKids newBoard (kidsCount-1) newSeed
 
 
 
