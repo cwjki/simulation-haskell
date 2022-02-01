@@ -8,7 +8,7 @@ n :: Int
 n = 10
 
 m :: Int
-m = 5
+m = 9
 
 robots :: Int
 robots = 2
@@ -17,13 +17,13 @@ kids :: Int
 kids = 7
 
 obstacles :: Int
-obstacles = 2
+obstacles = 5
 
 dirt :: Int
-dirt = 0
+dirt = 5
 
 seed :: Int
-seed = 50
+seed = 5
 
 
 

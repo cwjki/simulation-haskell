@@ -23,11 +23,11 @@ type Board = [[Cell]]
 
 instance Show CellType where
     show Empty          = "[   ]"
-    show Kid            = "[K  ]"
-    show Obstacle       = "[O  ]"
-    show Corral         = "[C  ]"
-    show Dirt           = "[D  ]"
-    show Robot          = "[R  ]"
+    show Kid            = "[ K ]"
+    show Obstacle       = "[ O ]"
+    show Corral         = "[ C ]"
+    show Dirt           = "[ D ]"
+    show Robot          = "[ R ]"
     show RobotKid       = "[RK ]"
     show RobotDirt      = "[RD ]"
     show RobotCorral    = "[RC ]"

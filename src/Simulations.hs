@@ -20,6 +20,7 @@ import           Utils                          ( printBoard
 
 
 
+
 simulate :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> IO ()
 simulate n m robots kids obstacles dirt seed = do
     let board = generateBoard n m robots kids obstacles dirt seed
@@ -31,10 +32,13 @@ simulate n m robots kids obstacles dirt seed = do
 
 
 generateBoard :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Board
-generateBoard n m robots kids obstacles dirt seed = board where  
+generateBoard n m robots kids obstacles dirts seed = board where  
     emptyBoard = generateEmptyBoard n m
     corralBoard = generateCorrals emptyBoard kids (mkStdGen seed)
-    board = generateKids corralBoard kids (mkStdGen (seed+5))
+    kidBoard = generateStuff corralBoard Kid kids (mkStdGen (seed+5))
+    obstacleBoard = generateStuff kidBoard Obstacle obstacles (mkStdGen (seed + 103))
+    dirtBoard = generateStuff obstacleBoard Dirt dirts (mkStdGen (seed + 4))
+    board = generateStuff dirtBoard Robot robots (mkStdGen (seed + 43))
 
 
 
@@ -54,7 +58,6 @@ generateEmptyColumns columns row column
     | column == columns = []
     | otherwise = (Empty, (row, column))
     : generateEmptyColumns columns row (column + 1)
-
 
 
 -- generate Corrals
@@ -88,17 +91,36 @@ generateKids board kidsCount seed
         in generateKids newBoard (kidsCount-1) newSeed
 
 
-
-
+-- generate Obstacles
+generateObstacles :: Board -> Int -> StdGen -> Board
+generateObstacles board obstacleCount seed
+    | obstacleCount == 0 = board
+    | otherwise = 
+        let emptyCells              = filterByCellType Empty board
+            (rIndex, newSeed      ) = randomGen 0 (length emptyCells - 1) seed
+            (_     , (row, column)) = emptyCells !! rIndex
+            newBoard                = replaceCell (Obstacle , (row, column)) board
+        in generateObstacles newBoard (obstacleCount - 1) newSeed
 
 
 -- generate Robots
+generateRobots :: Board -> Int -> StdGen -> Board
+generateRobots board robotCount seed
+    | robotCount == 0 = board
+    | otherwise = 
+        let emptyCells              = filterByCellType Empty board
+            (rIndex, newSeed      ) = randomGen 0 (length emptyCells - 1) seed
+            (_     , (row, column)) = emptyCells !! rIndex
+            newBoard                = replaceCell (Robot, (row, column)) board
+        in generateRobots newBoard (robotCount - 1) newSeed
 
--- generate Obstacles
 
-
--- generate Kids 
-
-
--- generate Dirt
-
+generateStuff :: Board -> CellType  ->  Int -> StdGen  -> Board 
+generateStuff board cellType count seed
+    | count == 0 = board
+    | otherwise = 
+        let emptyCells              = filterByCellType Empty board
+            (rIndex, newSeed      ) = randomGen 0 (length emptyCells - 1) seed
+            (_     , (row, column)) = emptyCells !! rIndex
+            newBoard                = replaceCell (cellType, (row, column)) board
+        in generateStuff newBoard cellType (count - 1) newSeed
