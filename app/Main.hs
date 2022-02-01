@@ -14,7 +14,7 @@ robots :: Int
 robots = 2
 
 kids :: Int
-kids = 2
+kids = 7
 
 obstacles :: Int
 obstacles = 2

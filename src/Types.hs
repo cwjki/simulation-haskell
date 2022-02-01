@@ -1,12 +1,13 @@
 
 module Types (
     Board, CellType(Empty, Corral), Cell,
-    filterByCellType, 
-    getAdjacentCellsList
+    filterByCellType,
+    getEmptyAdjacentCells
 
     )
     where
 
+import Debug.Trace
 
 data CellType = Empty | Kid | Obstacle | Corral | Dirt
                 | Robot | RobotKid | RobotDirt | RobotCorral
@@ -55,7 +56,7 @@ getCellColumn (celltype, position) = snd position
 getAdjacentCells :: Cell -> Board -> [Cell]
 getAdjacentCells (cellType, (row, column)) board = adjacentCells where
     rowLength = length board
-    columnLength = length board
+    columnLength = length (head board)
     up = [board !! (row-1) !! column | row /= 0]
     left = [board !! row !! (column - 1) | column /= 0]
     down = [board !! (row+1) !! column | row /= (rowLength-1)]
@@ -64,9 +65,8 @@ getAdjacentCells (cellType, (row, column)) board = adjacentCells where
     adjacentCells = up ++ left ++ down ++ rigth
 
 getAdjacentCellsList :: [Cell] -> Board -> [Cell]
-getAdjacentCellsList cells board
-    | null cells = []
-    | otherwise  = getAdjacentCells (head cells) board ++ getAdjacentCellsList (tail cells) board
+getAdjacentCellsList [] _ = []
+getAdjacentCellsList (h : t) board = getAdjacentCells h board ++ getAdjacentCellsList t board
 
 
 getEmptyAdjacentCells :: [Cell] -> Board -> [Cell]
@@ -79,12 +79,12 @@ getEmptyAdjacentCells cells board = result where
 
 -- return a list of cells with the desired cellType
 filterByCellType :: CellType -> Board -> [Cell]
-filterByCellType cellType board = filterByCellTypeRow cellType board 0 (length (head board))
+filterByCellType cellType board = filterByCellTypeRow cellType board 0 (length board)
 
 filterByCellTypeRow :: CellType -> Board -> Int -> Int -> [Cell]
 filterByCellTypeRow cellType board row rowLength
     | row == rowLength = []
-    | otherwise = filterByCellTypeColumn cellType board row 0 (length board) ++ filterByCellTypeRow cellType board (row+1) rowLength
+    | otherwise = filterByCellTypeColumn cellType board row 0 (length (head board)) ++ filterByCellTypeRow cellType board (row+1) rowLength
 
 filterByCellTypeColumn :: CellType -> Board -> Int -> Int -> Int -> [Cell]
 filterByCellTypeColumn cellType board row column columnLength

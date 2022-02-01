@@ -2,14 +2,15 @@ module Simulations
     ( simulate
     ) where
 
+import Debug.Trace
 import           System.Random                  ( StdGen
                                                 , mkStdGen
                                                 )
 import           Types                          ( Board
                                                 , Cell
                                                 , CellType(Empty, Corral)
-                                                , filterByCellType                                            
-                                                , getAdjacentCellsList
+                                                , filterByCellType
+                                                , getEmptyAdjacentCells
                                                 )
 import           Utils                          ( printBoard
                                                 , randomGen
@@ -22,26 +23,19 @@ import           Utils                          ( printBoard
 simulate :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> IO ()
 simulate n m robots kids obstacles dirt seed = do
     let board = generateBoard n m robots kids obstacles dirt seed
-    print board
-    putStrLn "FIN"
-    putStrLn
-        "---------------------------------------------------------------------------------------"
     printBoard board
-    let (a, seed1) = randomGen 0 10 (mkStdGen seed)
-    print a
-    print seed1
 
-    let (a, seed2) = randomGen 0 10 seed1
-    print a
-    print seed2
 
 
 
 
 
 generateBoard :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Board
-generateBoard n m robots kids obstacles dirt seed = board
-    where board = generateEmptyBoard n m
+generateBoard n m robots kids obstacles dirt seed = board where 
+    randomSeed = mkStdGen seed
+    emptyBoard = generateEmptyBoard n m
+    board = generateCorrals emptyBoard kids randomSeed
+
 
 
 -- generate Empty Cells
@@ -69,16 +63,16 @@ generateCorrals board corralCount seed
     | corralCount == 0 = board
     | null (filterByCellType Corral board) = 
         let emptyCells        = filterByCellType Empty board
-            (rIndex, newSeed) = randomGen 0 (length emptyCells) seed
-            choosenCell       = emptyCells !! rIndex
-            newBoard          = replaceCell choosenCell board
+            (rIndex, newSeed) = randomGen 0 (length emptyCells -1) seed
+            (_ ,(row, column))       = emptyCells !! rIndex
+            newBoard          = replaceCell (Corral, (row, column)) board
         in  generateCorrals newBoard (corralCount-1) newSeed
     | otherwise =
         let corralCells = filterByCellType Corral board
-            emptyAdjacentCells = getAdjacentCellsList corralCells board
-            (rIndex, newSeed) = randomGen 0 (length emptyAdjacentCells) seed
-            choosenCell = corralCells !! rIndex
-            newBoard = replaceCell choosenCell board
+            emptyAdjacentCells = getEmptyAdjacentCells corralCells board
+            (rIndex, newSeed) = randomGen 0 (length emptyAdjacentCells - 1) seed
+            (_, (row, column)) = emptyAdjacentCells !! rIndex
+            newBoard = replaceCell (Corral, (row, column)) board
         in generateCorrals newBoard (corralCount-1) newSeed
 
 

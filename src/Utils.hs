@@ -25,7 +25,7 @@ printBoardAux board i = do
 
 drawIndex :: Int -> IO ()
 drawIndex n = do
-    let index = [0 .. n]
+    let index = [0 .. n-1]
     drawIndexAux index
 
 drawIndexAux :: [Int] -> IO ()
@@ -33,6 +33,7 @@ drawIndexAux []      = putStr "\n"
 drawIndexAux (h : t) = do
     putStr "   "
     putStr (show h)
+    putStr " "
     drawIndexAux t
 
 drawBoard :: [[(CellType, (Int, Int))]] -> Int -> IO ()
