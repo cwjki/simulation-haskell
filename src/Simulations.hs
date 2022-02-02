@@ -143,7 +143,6 @@ generateStuff board cellType count seed
 
 moveKids :: Board -> StdGen -> Board
 moveKids board seed = newBoard where
-    a = trace ("DEBUG: bobreverse" ++ show 5) 5
     kids =  filterByCellType Kid board
     newBoard = _moveKids board kids seed
 

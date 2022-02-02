@@ -143,13 +143,13 @@ moveObstacles board cell rowDir colDir =
 
 _moveObstacles :: Board -> Cell -> Int -> Int -> Board
 _moveObstacles board cell rowDir colDir
-    | getCellType cell == Kid = board
+    | getCellType cell == Kid = replaceCell (Empty, (getCellRow cell, getCellColumn cell)) board
     | otherwise = newBoard where 
         row = getCellRow cell
         col = getCellColumn cell
         newRow = row + rowDir
         newCol = col + colDir
-        newCellType = getCellType cell
+        newCellType = getCellType (board !! newRow !! newCol)
         boardAux = replaceCell (newCellType, (row, col)) board
         newBoard = _moveObstacles boardAux (board !! newRow !! newCol) rowDir colDir
 

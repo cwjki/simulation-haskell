@@ -25,7 +25,7 @@ dirt :: Int
 dirt = 1
 
 seed :: Int
-seed = 5
+seed = 49
 
 
 
