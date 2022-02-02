@@ -2,6 +2,7 @@
 module Types (
     Board, CellType(Empty, Corral, Kid, Obstacle, Dirt, Robot), Cell,
     filterByCellType,
+    filterByCellTypeList,
     getEmptyAdjacentCells,
     getCellRow,
     getCellColumn,
@@ -10,12 +11,15 @@ module Types (
     replaceCell,
     replaceCellList,
     getCellType,
-    getAdjacentCells
+    getAdjacentCells,
+    getAllAdjacentCells,
+    get9Cells
     )
     where
 
 import Debug.Trace
 import System.Random (StdGen)
+import Data.Monoid (All(getAll))
 
 
 data CellType = Empty | Kid | Obstacle | Corral | Dirt
@@ -77,6 +81,23 @@ getAdjacentCellsList :: [Cell] -> Board -> [Cell]
 getAdjacentCellsList [] _ = []
 getAdjacentCellsList (h : t) board = getAdjacentCells h board ++ getAdjacentCellsList t board
 
+getAllAdjacentCells :: Cell -> Board -> [Cell]
+getAllAdjacentCells (cellType, (row, column)) board = adjacentCells where
+    rowLength = length board
+    columnLength = length (head board)
+    up        = [board !! (row-1) !! (column-1)  | row /= 0]
+    left      = [board !! row !! (column-1)      | column /= 0]
+    down      = [board !! (row+1) !! column      | row /= (rowLength-1)]
+    rigth     = [board !! row !! (column+1)      | column /= (columnLength-1)]
+    upLeft    = [board !! (row-1) !! (column-1)  | row /= 0 && column /= 0]
+    upRigth   = [board !! (row-1) !! (column+1)  | row /= 0 && column /= (columnLength-1)]
+    downLeft  = [board !! (row+1) !! (column-1)  | row /= (rowLength-1) && column /= 0]
+    downRigth = [board !! (row+1) !! (column+1) | row /= (rowLength-1) && column /= (columnLength-1)]
+
+    adjacentCells = up ++ left ++ down ++ rigth ++ upLeft ++ upRigth ++ downLeft ++ downRigth
+
+get9Cells :: Cell -> Board -> [Cell]
+get9Cells cell board = cell : getAllAdjacentCells cell board
 
 getEmptyAdjacentCells :: [Cell] -> Board -> [Cell]
 getEmptyAdjacentCells cells board = result where
@@ -137,14 +158,14 @@ getRowByIndexAux board columns index i
 -- Kid 
 
 moveObstacles :: Board -> Cell -> Int -> Int -> Board
-moveObstacles board cell rowDir colDir = 
+moveObstacles board cell rowDir colDir =
     let (row, column) = getOppositeDir rowDir colDir
      in _moveObstacles board cell row column
 
 _moveObstacles :: Board -> Cell -> Int -> Int -> Board
 _moveObstacles board cell rowDir colDir
     | getCellType cell == Kid = replaceCell (Empty, (getCellRow cell, getCellColumn cell)) board
-    | otherwise = newBoard where 
+    | otherwise = newBoard where
         row = getCellRow cell
         col = getCellColumn cell
         newRow = row + rowDir
@@ -164,13 +185,13 @@ getOppositeDir rowDir colDir
 
 
 -- try to find the firt empty cell in a direction, can return a non empty cell 
-getFirtsEmptyCell :: Board -> Cell -> Int -> Int -> Cell 
+getFirtsEmptyCell :: Board -> Cell -> Int -> Int -> Cell
 getFirtsEmptyCell board (cellType, (row, column)) dirRow dirCol =
     let rowLength = length board
         columnLength = length (head board)
         destinyRow = row + dirRow
-        destinyColumn  = column + dirCol 
-        emptyCell 
+        destinyColumn  = column + dirCol
+        emptyCell
             | destinyRow < 0 || destinyRow >= rowLength || destinyColumn < 0 || destinyColumn >= columnLength = board !! row !! column
             | getCellType(board !! destinyRow !! destinyColumn) == Empty = board !! destinyRow !! destinyColumn
             | getCellType(board !! destinyRow !! destinyColumn) == Obstacle = getFirtsEmptyCell board (board !! destinyRow !! destinyColumn) dirRow dirCol

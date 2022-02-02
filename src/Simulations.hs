@@ -25,7 +25,7 @@ import           Types                          ( Board
                                                 , getCellRow
                                                 , getCellColumn
                                                 , getCellType
-                                                , getFirtsEmptyCell
+                                                , getFirtsEmptyCell, getAllAdjacentCells, filterByCellTypeList, get9Cells
                                                 )
 import           Utils                          ( printBoard
                                                 , randomGen
@@ -151,25 +151,60 @@ _moveKids :: Board -> [Cell] -> StdGen -> Board
 _moveKids board [] _ = board
 _moveKids board (kidCell : t) seed =
     let (kidStay, newSeed) = randomGen 0 1 seed
-        newBoard
+        newBoard -- check if the kid wnats to move in this turn 
             | kidStay == 1 = board
             | otherwise =
                 let possibleCells = getAdjacentCells kidCell board
                     (rIndex, newSeed) = randomGen 0 (length possibleCells -1) seed
                     choosenCell = possibleCells !! rIndex
-                    boardAux1
-                        | getCellType choosenCell == Empty = replaceCell (Empty, (getCellRow kidCell, getCellColumn kidCell)) (replaceCell (Kid, (getCellRow choosenCell, getCellColumn choosenCell)) board)
+                    boardAux1 -- check if the kid want to move to an empty cell or can push some obstacles
+                        | getCellType choosenCell == Empty = 
+                            let boardWithKidMove = replaceCell (Empty, (getCellRow kidCell, getCellColumn kidCell)) (replaceCell (Kid, (getCellRow choosenCell, getCellColumn choosenCell)) board)
+                             in kidGenerateDirt boardWithKidMove (boardWithKidMove !! getCellRow kidCell !! getCellColumn kidCell)
+                        
                         | getCellType choosenCell == Obstacle =
                             let rowDir = getCellRow choosenCell - getCellRow kidCell
                                 colDir = getCellColumn choosenCell - getCellColumn kidCell
                                 destinyCell = getFirtsEmptyCell board choosenCell rowDir colDir
-                                boardAux2
-                                    | getCellType destinyCell == Empty = moveObstacles board destinyCell rowDir colDir
-                                    | otherwise = board
+                                boardAux2 -- check if the kid can push the obstacles to move
+                                    | getCellType destinyCell == Empty = 
+                                        let boardWithKidMove = moveObstacles board destinyCell rowDir colDir
+                                         in kidGenerateDirt boardWithKidMove (boardWithKidMove !! getCellRow kidCell !! getCellColumn kidCell)
+                                    | otherwise = board                       
                              in boardAux2
+
                         | otherwise = board
                  in boardAux1
      in _moveKids newBoard t newSeed
 
+
+kidGenerateDirt :: Board -> Cell -> Board 
+kidGenerateDirt board kidCell = newBoard where
+    cells = get9Cells kidCell board
+    kidsCount = length (filterByCellTypeList Kid cells)
+    emptyCount = length (filterByCellTypeList Empty cells)
+    newBoard = putDirt board cells kidsCount emptyCount
+
+-- putDirt :: Board -> [Cell] -> Int -> Int -> Board 
+-- putDirt board cells 1 emptyCount = 
+
+-- putDirt board cells 2 emptyCount = 
+-- putDirt board cells kidsCount emptyCount = 
+
+
+
+generateDirt :: Board -> [Cell] -> Int -> StdGen  -> Board
+generateDirt board [] _ _ = board
+generateDirt board _ 0 _ = board
+generateDirt board emptyCells dirtCount seed = 
+    let (genDirt, newSeed) = randomGen 0 1 seed 
+        newBoard 
+            | genDirt == 0 = generateDirt board emptyCells (dirtCount-1) newSeed
+            | otherwise = 
+                let (rIndex, newSeed1) = randomGen 0 (length emptyCells -1) newSeed
+                    (cellType, (row, col)) = emptyCells !! rIndex
+                    dirtyBoard = replaceCell (Dirt, (row, col)) board
+                 in generateDirt dirtyBoard (filterByCellTypeList Empty emptyCells) (dirtCount-1) newSeed1
+     in newBoard
 
 
