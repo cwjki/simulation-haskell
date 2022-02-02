@@ -1,6 +1,8 @@
 
 module Types (
     Board, CellType(Empty, Corral, Kid, Obstacle, Dirt, Robot), Cell,
+    State (Regular ,WithKid, OnDirt, OnCorral, OnCorrallWithKid),
+    TaskType (GrabKid, Clean),
     filterByCellType,
     filterByCellTypeList,
     getEmptyAdjacentCells,
@@ -19,33 +21,37 @@ module Types (
 
 import Debug.Trace
 import System.Random (StdGen)
-import Data.Monoid (All(getAll))
 
 
-data CellType = Empty | Kid | Obstacle | Corral | Dirt
-                | Robot | RobotKid | RobotDirt | RobotCorral
-                | KidCorral | RobotKidCorral
-                deriving (Eq)
+data CellType = Empty | Kid State | Obstacle | Corral | Dirt | Robot State Task deriving (Eq)
+
+data State = Regular | WithKid | OnDirt | OnCorral | OnCorrallWithKid deriving (Eq)
+
+data TaskType = NoTask | GrabKid | Clean deriving Eq
 
 type Position = (Int, Int)
 
 type Cell = (CellType, Position)
 
+type Task = (TaskType, Cell)
+
+
 type Board = [[Cell]]
 
 
 instance Show CellType where
-    show Empty          = "[   ]"
-    show Kid            = "[ K ]"
-    show Obstacle       = "[ O ]"
-    show Corral         = "[ C ]"
-    show Dirt           = "[ D ]"
-    show Robot          = "[ R ]"
-    show RobotKid       = "[RK ]"
-    show RobotDirt      = "[RD ]"
-    show RobotCorral    = "[RC ]"
-    show KidCorral      = "[KC ]"
-    show RobotKidCorral = "[RKC]"
+    show Empty                      = "[   ]"
+    show Obstacle                   = "[ O ]"
+    show Corral                     = "[ C ]"
+    show Dirt                       = "[ D ]"
+    show (Kid Regular)              = "[ K ]"
+    show (Kid OnCorral )            = "[KC ]"
+    show (Robot Regular _ )         = "[ R ]"
+    show (Robot WithKid _)          = "[RK ]"
+    show (Robot OnDirt _)           = "[RD ]"
+    show (Robot OnCorral _)         = "[RC ]"
+    show (Robot OnCorrallWithKid _) = "[RKC]"
+    show (Kid _)                    = "[ E ]"
 
 
 
@@ -164,7 +170,7 @@ moveObstacles board cell rowDir colDir =
 
 _moveObstacles :: Board -> Cell -> Int -> Int -> Board
 _moveObstacles board cell rowDir colDir
-    | getCellType cell == Kid = replaceCell (Empty, (getCellRow cell, getCellColumn cell)) board
+    | getCellType cell == Kid Regular = replaceCell (Empty, (getCellRow cell, getCellColumn cell)) board
     | otherwise = newBoard where
         row = getCellRow cell
         col = getCellColumn cell
@@ -200,10 +206,24 @@ getFirtsEmptyCell board (cellType, (row, column)) dirRow dirCol =
 
 
 
+-- Robots Logic
+
+getRobotTaskType :: Cell -> TaskType
+getRobotTaskType ( Robot state (taskType, cell), (row, col) ) = taskType
+getRobotTaskType cell = NoTask
+
+getRobotTarget :: Cell -> Cell
+getRobotTarget ( Robot state (taskType, cell), (row, col) ) = cell
+getRobotTarget cell = cell
+
+-- movesRobots :: Board -> Board
+-- movesRobots board = 
+--     let robots = filterByCellType (Robot Regular) board
 
 
 
-
+-- _moveRobots :: Board -> [Cell] -> Board
+-- _moveRobots board robots = board
 
 
 
