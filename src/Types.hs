@@ -85,7 +85,7 @@ getAllAdjacentCells :: Cell -> Board -> [Cell]
 getAllAdjacentCells (cellType, (row, column)) board = adjacentCells where
     rowLength = length board
     columnLength = length (head board)
-    up        = [board !! (row-1) !! (column-1)  | row /= 0]
+    up        = [board !! (row-1) !! column  | row /= 0]
     left      = [board !! row !! (column-1)      | column /= 0]
     down      = [board !! (row+1) !! column      | row /= (rowLength-1)]
     rigth     = [board !! row !! (column+1)      | column /= (columnLength-1)]

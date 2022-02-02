@@ -160,7 +160,7 @@ _moveKids board (kidCell : t) seed =
                     boardAux1 -- check if the kid want to move to an empty cell or can push some obstacles
                         | getCellType choosenCell == Empty = 
                             let boardWithKidMove = replaceCell (Empty, (getCellRow kidCell, getCellColumn kidCell)) (replaceCell (Kid, (getCellRow choosenCell, getCellColumn choosenCell)) board)
-                             in kidGenerateDirt boardWithKidMove (boardWithKidMove !! getCellRow kidCell !! getCellColumn kidCell)
+                             in kidGenerateDirt boardWithKidMove (boardWithKidMove !! getCellRow kidCell !! getCellColumn kidCell) newSeed
                         
                         | getCellType choosenCell == Obstacle =
                             let rowDir = getCellRow choosenCell - getCellRow kidCell
@@ -169,7 +169,7 @@ _moveKids board (kidCell : t) seed =
                                 boardAux2 -- check if the kid can push the obstacles to move
                                     | getCellType destinyCell == Empty = 
                                         let boardWithKidMove = moveObstacles board destinyCell rowDir colDir
-                                         in kidGenerateDirt boardWithKidMove (boardWithKidMove !! getCellRow kidCell !! getCellColumn kidCell)
+                                         in kidGenerateDirt boardWithKidMove (boardWithKidMove !! getCellRow kidCell !! getCellColumn kidCell) newSeed
                                     | otherwise = board                       
                              in boardAux2
 
@@ -178,22 +178,22 @@ _moveKids board (kidCell : t) seed =
      in _moveKids newBoard t newSeed
 
 
-kidGenerateDirt :: Board -> Cell -> Board 
-kidGenerateDirt board kidCell = newBoard where
+kidGenerateDirt :: Board -> Cell -> StdGen -> Board 
+kidGenerateDirt board kidCell seed = newBoard where
     cells = get9Cells kidCell board
     kidsCount = length (filterByCellTypeList Kid cells)
-    emptyCount = length (filterByCellTypeList Empty cells)
-    newBoard = putDirt board cells kidsCount emptyCount
+    emptyCells = filterByCellTypeList Empty cells
+    emptyCount = length emptyCells
+    newBoard = putDirt board emptyCells kidsCount emptyCount seed
 
--- putDirt :: Board -> [Cell] -> Int -> Int -> Board 
--- putDirt board cells 1 emptyCount = 
-
--- putDirt board cells 2 emptyCount = 
--- putDirt board cells kidsCount emptyCount = 
-
+putDirt :: Board -> [Cell] -> Int -> Int -> StdGen  -> Board 
+putDirt board cells 1 emptyCount seed         = generateDirt board cells 1 seed
+putDirt board cells 2 emptyCount seed         = generateDirt board cells 3 seed
+putDirt board cells kidsCount emptyCount seed = generateDirt board cells 6 seed
 
 
-generateDirt :: Board -> [Cell] -> Int -> StdGen  -> Board
+-- put or not n dirt cell in a grid 3x3 
+generateDirt :: Board -> [Cell] -> Int -> StdGen -> Board
 generateDirt board [] _ _ = board
 generateDirt board _ 0 _ = board
 generateDirt board emptyCells dirtCount seed = 
