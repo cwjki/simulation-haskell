@@ -1,6 +1,8 @@
 module Main where
 
 import Simulations (simulate)
+import System.Random (mkStdGen)
+import Utils (randomGen)
 
 
 -- Params
@@ -11,16 +13,16 @@ m :: Int
 m = 9
 
 robots :: Int
-robots = 2
+robots = 1
 
 kids :: Int
-kids = 7
+kids = 10
 
 obstacles :: Int
-obstacles = 5
+obstacles = 25
 
 dirt :: Int
-dirt = 5
+dirt = 1
 
 seed :: Int
 seed = 5
@@ -35,4 +37,4 @@ main = do
     putStrLn "---------------------------------------------------------------------------------------"
     putStrLn ""
 
-    simulate n m robots kids obstacles dirt seed 
+    simulate n m robots kids obstacles dirt seed

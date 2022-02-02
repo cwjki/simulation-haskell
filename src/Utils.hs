@@ -1,8 +1,6 @@
 module Utils
     ( printBoard
     , randomGen
-    , replaceCell
-    , replaceCellList
     ) where
 
 import System.Random ( Random(randomR), StdGen )
@@ -48,21 +46,6 @@ drawRow []                       = putStr "\n"
 drawRow ((cellType, (_, _)) : t) = do
     putStr (show cellType)
     drawRow t
-
-
-replace :: [a] -> Int -> a -> [a]
-replace list index element =
-    let (first, x : xs) = splitAt index list in first ++ (element : xs)
-
--- replace a Cell on the Board
-replaceCell :: Cell -> Board -> Board
-replaceCell (cellType, (row, column)) board =
-    replace board row (replace (board !! row) column (cellType, (row, column)))
-
--- given a list of Cells update the Board
-replaceCellList :: [Cell] -> Board -> Board 
-replaceCellList [] board = board
-replaceCellList ((cellType, (row, column)) : t) board = replaceCellList t (replace board row (replace (board !! row) column (cellType, (row, column))))
 
 
 

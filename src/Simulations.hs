@@ -18,11 +18,18 @@ import           Types                          ( Board
                                                     )
                                                 , filterByCellType
                                                 , getEmptyAdjacentCells
+                                                , moveObstacles
+                                                , replaceCell
+                                                , replaceCellList
+                                                , getAdjacentCells
+                                                , getCellRow
+                                                , getCellColumn
+                                                , getCellType
+                                                , getFirtsEmptyCell
                                                 )
 import           Utils                          ( printBoard
                                                 , randomGen
-                                                , replaceCell
-                                                , replaceCellList
+
                                                 )
 
 
@@ -34,7 +41,35 @@ import           Utils                          ( printBoard
 simulate :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> IO ()
 simulate n m robots kids obstacles dirt seed = do
     let board = generateBoard n m robots kids obstacles dirt seed
+        mKids1 = moveKids board (mkStdGen (seed + 4))
+        mKids2 = moveKids mKids1 (mkStdGen (seed + 5))
+        mKids3 = moveKids mKids2 (mkStdGen (seed + 6))
+        mKids4 = moveKids mKids3 (mkStdGen (seed + 7))
+        mKids5 = moveKids mKids4 (mkStdGen (seed + 8))
+        mKids6 = moveKids mKids5 (mkStdGen (seed + 9))
+        mKids7 = moveKids mKids6 (mkStdGen (seed + 99))
+        mKids8 = moveKids mKids7 (mkStdGen (seed + 56))
     printBoard board
+    
+    print "Movimiento 1"
+    printBoard mKids1
+    print "Movimiento 2"
+    printBoard mKids2
+    print "Movimiento 3"
+    printBoard mKids3
+    print "Movimiento 4"
+    printBoard mKids4
+    print "Movimiento 5"
+    printBoard mKids5
+    print "Movimiento 6"
+    printBoard mKids6
+    print "Movimiento 7"
+    printBoard mKids7
+    print "Movimiento 8"
+    printBoard mKids8
+
+
+
 
 
 generateBoard :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Board
@@ -101,29 +136,41 @@ generateStuff board cellType count seed
 
 
 
+-- moveKids :: Board -> StdGen -> Board
+-- moveKids board seed = 
+--     let kids = trace ("DEBUG: bobreverse" ++ show (filterByCellType Kid board)) filterByCellType Kid board
+--      in _moveKids board kids seed
+
 moveKids :: Board -> StdGen -> Board
-moveKids board seed = 
-    let kids = filterByCellType Kid board
+moveKids board seed = newBoard where
+    a = trace ("DEBUG: bobreverse" ++ show 5) 5
+    kids =  filterByCellType Kid board
+    newBoard = _moveKids board kids seed
 
 
 _moveKids :: Board -> [Cell] -> StdGen -> Board
 _moveKids board [] _ = board
-_moveKids board (kidCell : t) seed = 
-    let (kidStay, newSeed) = randomGen 0 2 seed 
-        newBoard 
+_moveKids board (kidCell : t) seed =
+    let (kidStay, newSeed) = randomGen 0 1 seed
+        newBoard
             | kidStay == 1 = board
-            | otherwise = 
+            | otherwise =
                 let possibleCells = getAdjacentCells kidCell board
-                    (rIndex, newSeed) = randomGen 0 length (possibleCells -1) seed
+                    (rIndex, newSeed) = randomGen 0 (length possibleCells -1) seed
                     choosenCell = possibleCells !! rIndex
-                    boardAux 
-                        | getCellType choosenCell == Empty || Obstacle = 
+                    boardAux1
+                        | getCellType choosenCell == Empty = replaceCell (Empty, (getCellRow kidCell, getCellColumn kidCell)) (replaceCell (Kid, (getCellRow choosenCell, getCellColumn choosenCell)) board)
+                        | getCellType choosenCell == Obstacle =
                             let rowDir = getCellRow choosenCell - getCellRow kidCell
                                 colDir = getCellColumn choosenCell - getCellColumn kidCell
-                                destinyCell = getFirtsEmptyCell board choosenCell rowDir colDor
-
-
+                                destinyCell = getFirtsEmptyCell board choosenCell rowDir colDir
+                                boardAux2
+                                    | getCellType destinyCell == Empty = moveObstacles board destinyCell rowDir colDir
+                                    | otherwise = board
+                             in boardAux2
                         | otherwise = board
+                 in boardAux1
+     in _moveKids newBoard t newSeed
 
 
 

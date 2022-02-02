@@ -5,7 +5,12 @@ module Types (
     getEmptyAdjacentCells,
     getCellRow,
     getCellColumn,
-    getFirtsEmptyCell
+    getFirtsEmptyCell,
+    moveObstacles,
+    replaceCell,
+    replaceCellList,
+    getCellType,
+    getAdjacentCells
     )
     where
 
@@ -78,6 +83,20 @@ getEmptyAdjacentCells cells board = result where
     adjacentCells = getAdjacentCellsList cells board
     result = filterByCellTypeList Empty adjacentCells
 
+replace :: [a] -> Int -> a -> [a]
+replace list index element =
+  let (first, x : xs) = splitAt index list in first ++ (element : xs)
+
+-- replace a Cell on the Board
+replaceCell :: Cell -> Board -> Board
+replaceCell (cellType, (row, column)) board =
+  replace board row (replace (board !! row) column (cellType, (row, column)))
+
+-- given a list of Cells update the Board
+replaceCellList :: [Cell] -> Board -> Board
+replaceCellList [] board = board
+replaceCellList ((cellType, (row, column)) : t) board = replaceCellList t (replace board row (replace (board !! row) column (cellType, (row, column))))
+
 
 -- Board
 
@@ -117,7 +136,34 @@ getRowByIndexAux board columns index i
 
 -- Kid 
 
+moveObstacles :: Board -> Cell -> Int -> Int -> Board
+moveObstacles board cell rowDir colDir = 
+    let (row, column) = getOppositeDir rowDir colDir
+     in _moveObstacles board cell row column
 
+_moveObstacles :: Board -> Cell -> Int -> Int -> Board
+_moveObstacles board cell rowDir colDir
+    | getCellType cell == Kid = board
+    | otherwise = newBoard where 
+        row = getCellRow cell
+        col = getCellColumn cell
+        newRow = row + rowDir
+        newCol = col + colDir
+        newCellType = getCellType cell
+        boardAux = replaceCell (newCellType, (row, col)) board
+        newBoard = _moveObstacles boardAux (board !! newRow !! newCol) rowDir colDir
+
+
+-- return opposite direction 
+getOppositeDir :: Int -> Int -> (Int, Int)
+getOppositeDir rowDir colDir
+    | rowDir == 0 = (0, -colDir)
+    | colDir == 0 = (-rowDir, 0)
+    | otherwise = (rowDir, colDir)
+
+
+
+-- try to find the firt empty cell in a direction, can return a non empty cell 
 getFirtsEmptyCell :: Board -> Cell -> Int -> Int -> Cell 
 getFirtsEmptyCell board (cellType, (row, column)) dirRow dirCol =
     let rowLength = length board
