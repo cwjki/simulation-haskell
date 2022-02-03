@@ -27,6 +27,7 @@ library
                         Utils
 
     build-depends:    base ^>=4.14.3.0,
+                      containers >=0.5.6.2 && <0.7,
                       random
     hs-source-dirs:     src
 

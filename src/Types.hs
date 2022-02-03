@@ -21,6 +21,10 @@ module Types (
 
 import Debug.Trace
 import System.Random (StdGen)
+import Data.List (sortOn)
+import Data.Graph (path, reachable)
+import Data.Unique (newUnique)
+
 
 
 data CellType = Empty | Kid State | Obstacle | Corral | Dirt | Robot State Task deriving (Eq)
@@ -120,6 +124,11 @@ getDistance origin destiny = distance where
     colDistance = (originCol - destinyCol) ^ 2
     distance = rowDistance + colDistance
 
+getCellsWithDistances :: Cell -> [Cell] -> [(Cell, Int)]
+getCellsWithDistances _ [] = []
+getCellsWithDistances origin (cell : t) =
+  let distance = getDistance origin cell
+   in (cell, distance) : getCellsWithDistances origin t
 
 
 
@@ -229,28 +238,118 @@ getRobotTarget :: Cell -> Cell
 getRobotTarget ( Robot state (taskType, cell), (row, col) ) = cell
 getRobotTarget cell = cell
 
+getCellState :: Cell -> State
+getCellState (Robot state (taskType, cell), (row, col)) = state
+getCellState (Kid state, (row, col)) = state
+getCellState cell = Regular
+
 getAllRobotsTargets :: [Cell] -> [Cell]
 getAllRobotsTargets = map getRobotTarget
 
 -- movesRobots :: Board -> Board
 -- movesRobots board = 
 --     let robots = filterByCellType (Robot _) board
---         robotsWithTask = 
+--         robotsWithTask = checkRobotsTasks board robots
+
+-- return a list with the Cell and the Distace to all reacheable cells 
+bfsDistance :: Board -> Int -> [Cell] -> [Cell] -> [(Cell, Int)] -> [(Cell, Int)]
+bfsDistance _ _ [] _ allDistances = allDistances
+bfsDistance board count (cell : queue) visited allDistances
+    | cell `elem` visited = bfsDistance board count queue visited allDistances
+    | otherwise = newAllDistances where
+        adjacentCells   = getAdjacentCells cell board
+        possibleCells   = getPossibleWalkCells adjacentCells
+        newQueue        = queue ++ possibleCells
+        newVisited      = visited ++ [cell]
+        tuples          = getDistanceTuple count possibleCells
+        newAllDistances = bfsDistance board (count+1) newQueue newVisited (allDistances ++ tuples)
+
+filterByReachable :: [Cell] -> [(Cell, Int)] -> [(Cell, Int)]
+filterByReachable [] reachableCells = []
+filterByReachable (cell: t) reachableCells = result where
+    tuple = getCellTuple cell reachableCells
+    result = tuple ++ filterByReachable t reachableCells
+
+
+getCellTuple :: Cell -> [(Cell, Int)] -> [(Cell, Int)]
+getCellTuple _ [] = []
+getCellTuple cell (h : t)
+    | cell == fst h = [h]
+    | otherwise = getCellTuple cell t 
+
+
+getDistanceTuple :: Int -> [Cell] -> [(Cell, Int)]
+getDistanceTuple _ [] = []
+getDistanceTuple distance (h : t) = (h, distance) : getDistanceTuple distance t
+
+
+bfsLoop :: Board -> Cell -> [Cell] -> [Cell] -> [(Cell, Cell)] -> [(Cell, Cell)]
+bfsLoop _ _ [] _ _ = []
+bfsLoop board destinyCell (cell : queue) visited path
+    | destinyCell == cell = path
+    | cell `elem` visited = bfsLoop board destinyCell queue visited path
+    | otherwise = newPath where
+        adjacentCells = getAdjacentCells cell board
+        possibleCells = getPossibleWalkCells adjacentCells
+        newQueue      = queue ++ possibleCells
+        newVisited    = visited ++ [cell]
+        tuple         = getPathTuple cell possibleCells
+        newPath = bfsLoop board destinyCell newQueue newVisited (path ++ tuple)
+
+
+-- getPath :: (Cell, Cell) -> (Cell, Cell) -> [(Cell, Cell)] -> [(Cell, Cell)] -> [(Cell, Cell)]
+-- getPath origin destiny path newPath =
+--     | origin == destiny 
+
+
+getPathTuple :: Cell -> [Cell] -> [(Cell, Cell)]
+getPathTuple _ [] = []
+getPathTuple cell (h : t) = (cell,h) : getPathTuple cell t
+
+
+-- get the possible cells where a robot can walk
+getPossibleWalkCells :: [Cell] -> [Cell]
+getPossibleWalkCells adjacentCells = possibleCells where
+    emptyCells  = filterByCellTypeList Empty adjacentCells
+    dirtCells   = filterByCellTypeList Dirt adjacentCells
+    corralCells = filterByCellTypeList Corral adjacentCells
+    possibleCells = emptyCells ++ dirtCells ++ corralCells
+
+
+checkRobotsTasks :: Board -> [Cell] -> Board
+checkRobotsTasks board [] = board
+checkRobotsTasks board (robot : t) =
+    let actualRobotTaskType = getRobotTaskType robot
+        newBoard
+         | actualRobotTaskType == NoTask =
+           let robotTask = getNewRobotTask board robot t
+               row = getCellRow robot
+               col = getCellColumn robot
+               state = getCellState robot
+            in replaceCell (Robot state robotTask, (row, col)) board
+         | otherwise = board
+     in checkRobotsTasks newBoard t
 
 
 
--- checkRobotsTasks :: Board -> [Cell] -> [Cell]
--- checkRobotsTasks board [] = filterByCellType (Robot _) board
--- checkRobotsTasks board (robot : t) = 
---     let actualRobotTaskType = getRobotTaskType robot
---         result 
---             | actualRobotTaskType == NoTask = 
---                 let robotTask = getNewRobotTask board robot t
 
 
--- getNewRobotTask :: Board -> Cell -> [Cell] -> Task
--- getNewRobotTask board robot otherRobots = newTask where
+getNewRobotTask :: Board -> Cell -> [Cell] -> Task
+getNewRobotTask board robot otherRobots = task where
+    allDistances = bfsDistance board 1 [robot] [] []
+    kids = filterByCellType (Kid Regular) board
+    dirt = filterByCellType Dirt board
+    nonTargetKids = getNonTargetCells kids otherRobots
+    nonTargetDirts = getNonTargetCells dirt otherRobots
+    reachableKids = filterByReachable nonTargetKids allDistances
+    reachableDirts = filterByReachable nonTargetDirts allDistances
 
+    task
+     | not (null reachableKids) =
+        let sortedTarget = sortOn snd reachableKids in (GrabKid, fst (head sortedTarget))
+     | not (null reachableDirts) =
+        let sortedTarget = sortOn snd reachableDirts in (Clean, fst (head sortedTarget))
+     | otherwise = (NoTask, robot)
 
 
 
