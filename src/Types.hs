@@ -110,6 +110,19 @@ getEmptyAdjacentCells cells board = result where
     adjacentCells = getAdjacentCellsList cells board
     result = filterByCellTypeList Empty adjacentCells
 
+getDistance :: Cell -> Cell -> Int
+getDistance origin destiny = distance where
+    originRow = getCellRow origin
+    originCol = getCellColumn origin
+    destinyRow = getCellRow destiny
+    destinyCol = getCellColumn destiny
+    rowDistance = (originRow - destinyRow) ^ 2
+    colDistance = (originCol - destinyCol) ^ 2
+    distance = rowDistance + colDistance
+
+
+
+
 replace :: [a] -> Int -> a -> [a]
 replace list index element =
   let (first, x : xs) = splitAt index list in first ++ (element : xs)
@@ -216,10 +229,43 @@ getRobotTarget :: Cell -> Cell
 getRobotTarget ( Robot state (taskType, cell), (row, col) ) = cell
 getRobotTarget cell = cell
 
+getAllRobotsTargets :: [Cell] -> [Cell]
+getAllRobotsTargets = map getRobotTarget
+
 -- movesRobots :: Board -> Board
 -- movesRobots board = 
---     let robots = filterByCellType (Robot Regular) board
+--     let robots = filterByCellType (Robot _) board
+--         robotsWithTask = 
 
+
+
+-- checkRobotsTasks :: Board -> [Cell] -> [Cell]
+-- checkRobotsTasks board [] = filterByCellType (Robot _) board
+-- checkRobotsTasks board (robot : t) = 
+--     let actualRobotTaskType = getRobotTaskType robot
+--         result 
+--             | actualRobotTaskType == NoTask = 
+--                 let robotTask = getNewRobotTask board robot t
+
+
+-- getNewRobotTask :: Board -> Cell -> [Cell] -> Task
+-- getNewRobotTask board robot otherRobots = newTask where
+
+
+
+
+getNonTargetCells :: [Cell] -> [Cell] -> [Cell]
+getNonTargetCells cells robots = _getNonTargetCells cells robots 0
+
+_getNonTargetCells :: [Cell] -> [Cell] -> Int -> [Cell]
+_getNonTargetCells cells robots index
+    | index == length robots = []
+    | otherwise = nonTargetCells where
+        cell = cells !! index
+        isTarget = cell `elem` getAllRobotsTargets robots
+        nonTargetCells
+            | isTarget = _getNonTargetCells cells robots (index+1)
+            | otherwise = cell : _getNonTargetCells cells robots (index+1)
 
 
 -- _moveRobots :: Board -> [Cell] -> Board
