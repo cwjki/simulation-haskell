@@ -3,7 +3,6 @@
 module Types (
     Board, CellType(Empty, Corral, Kid, Obstacle, Dirt, Robot), Cell,
     State (Regular ,WithKid, OnDirt, OnCorral, OnCorrallWithKid),
-    TaskType (GrabKid, Clean),
     filterByCellType,
     filterByCellTypeList,
     getEmptyAdjacentCells,
@@ -36,47 +35,43 @@ type Cell = (CellType, Position, State, Position)
 type Board = [[Cell]]
 
 
-instance Show CellType where
-    show Empty                      = "[   ]"
-    show Obstacle                   = "[ O ]"
-    show Corral                     = "[ C ]"
-    show Dirt                       = "[ D ]"
-    show (Kid Regular)              = "[ K ]"
-    show (Kid OnCorral )            = "[KC ]"
-    show (Robot Regular _ )         = "[ R ]"
-    show (Robot WithKid _)          = "[RK ]"
-    show (Robot OnDirt _)           = "[RD ]"
-    show (Robot OnCorral _)         = "[RC ]"
-    show (Robot OnCorrallWithKid _) = "[RKC]"
-    show (Kid _)                    = "[ E ]"
-
-
-
 -- Cell
 
 getCell :: Board -> Int -> Int -> Cell
 getCell board row column = board !! row !! column
 
 getCellType :: Cell -> CellType
-getCellType (cellType, position) = cellType
+getCellType (cellType, _, _, _) = cellType
 
 getPosition :: Cell -> Position
-getPosition (cellType, position) = position
+getPosition (_, position, _, _) = position
 
 getCellRow :: Cell -> Int
-getCellRow (celltype, position) = fst position
+getCellRow (_, position, _, _) = fst position
 
 getCellColumn :: Cell -> Int
-getCellColumn (celltype, position) = snd position
+getCellColumn (_, position, _ , _) = snd position
+
+getCellTargetRow :: Cell -> Int
+getCellTargetRow (_, _, _, targetPos) = fst targetPos
+
+getCellTargetCol :: Cell -> Int
+getCellTargetCol (_, _, _, targetPos) = snd targetPos
+
+getTargetCell :: Board -> Cell -> Cell
+getTargetCell board cell = board !! getCellTargetRow cell !! getCellTargetCol cell
+
+getCellState :: Cell -> State
+getCellState (_, _, state, _) = state
 
 getAdjacentCells :: Cell -> Board -> [Cell]
-getAdjacentCells (cellType, (row, column)) board = adjacentCells where
+getAdjacentCells (cellType, (row, column), _, _) board = adjacentCells where
     rowLength = length board
     columnLength = length (head board)
     up = [board !! (row-1) !! column | row /= 0]
     left = [board !! row !! (column - 1) | column /= 0]
-    down = [board !! (row+1) !! column | row /= (rowLength-1)]
-    rigth = [board !! row !! (column+1) | column /= (columnLength-1)]
+    down = [board !! (row+1) !! column | row /= rowLength-1]
+    rigth = [board !! row !! (column+1) | column /= columnLength-1]
 
     adjacentCells = up ++ left ++ down ++ rigth
 
@@ -85,17 +80,17 @@ getAdjacentCellsList [] _ = []
 getAdjacentCellsList (h : t) board = getAdjacentCells h board ++ getAdjacentCellsList t board
 
 getAllAdjacentCells :: Cell -> Board -> [Cell]
-getAllAdjacentCells (cellType, (row, column)) board = adjacentCells where
+getAllAdjacentCells (cellType, (row, column), _, _) board = adjacentCells where
     rowLength = length board
     columnLength = length (head board)
     up        = [board !! (row-1) !! column  | row /= 0]
     left      = [board !! row !! (column-1)      | column /= 0]
-    down      = [board !! (row+1) !! column      | row /= (rowLength-1)]
-    rigth     = [board !! row !! (column+1)      | column /= (columnLength-1)]
+    down      = [board !! (row+1) !! column      | row /= rowLength-1]
+    rigth     = [board !! row !! (column+1)      | column /= columnLength-1]
     upLeft    = [board !! (row-1) !! (column-1)  | row /= 0 && column /= 0]
-    upRigth   = [board !! (row-1) !! (column+1)  | row /= 0 && column /= (columnLength-1)]
-    downLeft  = [board !! (row+1) !! (column-1)  | row /= (rowLength-1) && column /= 0]
-    downRigth = [board !! (row+1) !! (column+1) | row /= (rowLength-1) && column /= (columnLength-1)]
+    upRigth   = [board !! (row-1) !! (column+1)  | row /= 0 && column /= columnLength-1]
+    downLeft  = [board !! (row+1) !! (column-1)  | row /= rowLength-1 && column /= 0]
+    downRigth = [board !! (row+1) !! (column+1) | row /= rowLength-1 && column /= columnLength-1]
 
     adjacentCells = up ++ left ++ down ++ rigth ++ upLeft ++ upRigth ++ downLeft ++ downRigth
 
@@ -131,13 +126,13 @@ replace list index element =
 
 -- replace a Cell on the Board
 replaceCell :: Cell -> Board -> Board
-replaceCell (cellType, (row, column)) board =
-  replace board row (replace (board !! row) column (cellType, (row, column)))
+replaceCell (cellType, (row, column), state, (targetRow, targetCol)) board =
+  replace board row (replace (board !! row) column (cellType, (row, column), state, (targetRow, targetCol)))
 
 -- given a list of Cells update the Board
 replaceCellList :: [Cell] -> Board -> Board
 replaceCellList [] board = board
-replaceCellList ((cellType, (row, column)) : t) board = replaceCellList t (replace board row (replace (board !! row) column (cellType, (row, column))))
+replaceCellList ((cellType, (row, column), state, targetPos) : t) board = replaceCellList t (replace board row (replace (board !! row) column (cellType, (row, column), state, targetPos)))
 
 
 -- Board
@@ -185,14 +180,14 @@ moveObstacles board cell rowDir colDir =
 
 _moveObstacles :: Board -> Cell -> Int -> Int -> Board
 _moveObstacles board cell rowDir colDir
-    | getCellType cell == Kid Regular = replaceCell (Empty, (getCellRow cell, getCellColumn cell)) board
+    | getCellType cell == Kid = replaceCell (Empty, (getCellRow cell, getCellColumn cell), Regular, (-1, -1)) board
     | otherwise = newBoard where
         row = getCellRow cell
         col = getCellColumn cell
         newRow = row + rowDir
         newCol = col + colDir
         newCellType = getCellType (board !! newRow !! newCol)
-        boardAux = replaceCell (newCellType, (row, col)) board
+        boardAux = replaceCell (newCellType, (row, col), Regular, (-1, -1)) board
         newBoard = _moveObstacles boardAux (board !! newRow !! newCol) rowDir colDir
 
 
@@ -207,7 +202,7 @@ getOppositeDir rowDir colDir
 
 -- try to find the firt empty cell in a direction, can return a non empty cell 
 getFirtsEmptyCell :: Board -> Cell -> Int -> Int -> Cell
-getFirtsEmptyCell board (cellType, (row, column)) dirRow dirCol =
+getFirtsEmptyCell board (cellType, (row, column), state, targetPos) dirRow dirCol =
     let rowLength = length board
         columnLength = length (head board)
         destinyRow = row + dirRow
@@ -219,25 +214,6 @@ getFirtsEmptyCell board (cellType, (row, column)) dirRow dirCol =
             | otherwise = board !! row !! column
     in emptyCell
 
-
-
--- Robots Logic
-
-getRobotTaskType :: Cell -> TaskType
-getRobotTaskType ( Robot state (taskType, cell), (row, col) ) = taskType
-getRobotTaskType cell = NoTask
-
-getRobotTarget :: Cell -> Cell
-getRobotTarget ( Robot state (taskType, cell), (row, col) ) = cell
-getRobotTarget cell = cell
-
-getCellState :: Cell -> State
-getCellState (Robot state (taskType, cell), (row, col)) = state
-getCellState (Kid state, (row, col)) = state
-getCellState cell = Regular
-
-getAllRobotsTargets :: [Cell] -> [Cell]
-getAllRobotsTargets = map getRobotTarget
 
 
 -- return a list with the Cell and the Distace to all reacheable cells 
@@ -307,94 +283,115 @@ getPossibleWalkCells adjacentCells = possibleCells where
     possibleCells = emptyCells ++ dirtCells ++ corralCells
 
 
+-- Robots Logic
+
+getAllRobotsTargets :: Board -> [Cell] -> [Cell]
+getAllRobotsTargets _ [] = []
+getAllRobotsTargets board (robot: t) = allTargets where
+    targetRow = getCellTargetRow robot
+    targetCol = getCellTargetCol robot 
+    allTargets
+        | targetRow == -1 && targetCol == -1 = getAllRobotsTargets board t
+        | otherwise = getTargetCell board robot : getAllRobotsTargets board t
+
+getAllRobotsTarget2 :: Board -> [Cell]
+getAllRobotsTarget2 board = 
+    let robots = filterByCellType Robot board
+    in map (getTargetCell board) robots
 
 
 checkRobotsTasks :: Board -> [Cell] -> Board
 checkRobotsTasks board [] = board
 checkRobotsTasks board (robot : t) =
-    let actualRobotTaskType = getRobotTaskType robot
+    let targetRow = getCellTargetRow robot
+        targetCol = getCellTargetCol robot
         newBoard
-         | actualRobotTaskType == NoTask =
-           let robotTask = getNewRobotTask board robot t
-               row = getCellRow robot
-               col = getCellColumn robot
-               state = getCellState robot
-            in replaceCell (Robot state robotTask, (row, col)) board
+         | targetRow == -1 && targetCol == -1 = getNewRobotTask board robot t
          | otherwise = board
      in checkRobotsTasks newBoard t
 
 
--- assign a task to all robots 
+--assign a task to all robots 
 computeRobotTasks :: Board -> [Cell] -> Board
 computeRobotTasks board [] = board
-computeRobotTasks board (robot : t) = newBoard where
-    robotTask = getNewRobotTask board robot t
-    row = getCellRow robot
-    col = getCellColumn robot
-    state = getCellState robot
-    newBoard = computeRobotTasks (replaceCell (Robot state robotTask, (row, col)) board) t
+computeRobotTasks board (robot : t) = computeRobotTasks (getNewRobotTask board robot t) t 
 
-getNewRobotTask :: Board -> Cell -> [Cell] -> Task
-getNewRobotTask board robot otherRobots = task where
+-- assign a new target to a robot
+getNewRobotTask :: Board -> Cell -> [Cell] -> Board
+getNewRobotTask board robot otherRobots = newBoard where
     allDistances = bfsDistance board 1 [robot] [] []
-    kids = filterByCellType (Kid Regular) board
+    kids = filterByCellType Kid board
     dirt = filterByCellType Dirt board
-    nonTargetKids = getNonTargetCells kids otherRobots
-    nonTargetDirts = getNonTargetCells dirt otherRobots
+    nonTargetKids = getNonTargetCells board kids otherRobots
+    nonTargetDirts = getNonTargetCells board dirt otherRobots
     reachableKids = filterByReachable nonTargetKids allDistances
     reachableDirts = filterByReachable nonTargetDirts allDistances
-
-    task
+    newBoard
      | not (null reachableKids) =
-        let sortedTarget = sortOn snd reachableKids in (GrabKid, fst (head sortedTarget))
+        let sortedTarget = sortOn snd reachableKids
+            target = fst (head sortedTarget)
+            rowTarget = getCellRow target 
+            colTarget = getCellColumn target 
+            row       = getCellRow robot
+            col       = getCellColumn robot
+            state     = getCellState robot
+         in replaceCell (Robot, (row, col), state, (rowTarget, colTarget)) board
+
      | not (null reachableDirts) =
-        let sortedTarget = sortOn snd reachableDirts in (Clean, fst (head sortedTarget))
-     | otherwise = (NoTask, robot)
+        let sortedTarget = sortOn snd reachableDirts
+            target = fst (head sortedTarget)
+            rowTarget = getCellRow target 
+            colTarget = getCellColumn target 
+            row       = getCellRow robot
+            col       = getCellColumn robot
+            state     = getCellState robot
+         in replaceCell (Robot, (row, col), state, (rowTarget, colTarget)) board
+     | otherwise = board
 
 
 
-getNonTargetCells :: [Cell] -> [Cell] -> [Cell]
-getNonTargetCells cells robots = _getNonTargetCells cells robots 0
+getNonTargetCells :: Board -> [Cell] -> [Cell] -> [Cell]
+getNonTargetCells board cells robots = _getNonTargetCells board cells robots 0
 
-_getNonTargetCells :: [Cell] -> [Cell] -> Int -> [Cell]
-_getNonTargetCells cells robots index
+_getNonTargetCells :: Board -> [Cell] -> [Cell] -> Int -> [Cell]
+_getNonTargetCells board cells robots index
     | index == length robots = []
     | otherwise = nonTargetCells where
         cell = cells !! index
-        isTarget = cell `elem` getAllRobotsTargets robots
+        isTarget = cell `elem` getAllRobotsTargets board robots
         nonTargetCells
-            | isTarget = _getNonTargetCells cells robots (index+1)
-            | otherwise = cell : _getNonTargetCells cells robots (index+1)
+            | isTarget = _getNonTargetCells board cells robots (index+1)
+            | otherwise = cell : _getNonTargetCells board cells robots (index+1)
 
 
-movesRobots :: Board -> Board
-movesRobots board = newBoard where
-    robots = filterByCellType (Robot _ _) board
-    robotsWithTask = computeRobotTasks board robots
-    newBoard = _moveRobots robotsWithTask (filterByCellType (Robot State Task) board)
+-- movesRobots :: Board -> Board
+-- movesRobots board = newBoard where
+--     robots = filterByCellType (Robot _ _) board
+--     robotsWithTask = computeRobotTasks board robots
+--     newBoard = _moveRobots robotsWithTask (filterByCellType (Robot State Task) board)
 
-getAllRobots :: Board -> [Cell]
-getAllRobots board =
-    let rowLength = length board
-        colLength = length (head board)
-     in _getAllRobots board rowLength colLength 0 0
+-- getAllRobots :: Board -> [Cell]
+-- getAllRobots board =
+--     let rowLength = length board
+--         colLength = length (head board)
+--      in _getAllRobots board rowLength colLength 0 0
 
 
-_getAllRobotsRows :: Board -> Int -> Int -> Int -> Int -> [Cell]
-_getAllRobotsRows board rowLength colLength row
-    | row == rowLength = []
-    | otherwise = _getAllRobotsCols board colLength row 0 ++ _getAllRobotsRows board rowLength colLength (row+1)
+-- _getAllRobotsRows :: Board -> Int -> Int -> Int -> Int -> [Cell]
+-- _getAllRobotsRows board rowLength colLength row
+--     | row == rowLength = []
+--     | otherwise = _getAllRobotsCols board colLength row 0 ++ _getAllRobotsRows board rowLength colLength (row+1)
 
-_getAllRobotsCols :: Board -> Int -> Int -> Int -> [Cell]
-_getAllRobotsCols board colLength row col
-  | col == colLength = []
-  | otherwise =
-      let cell = board !! row !! col
-          cellType = getCellType cell
-          possibleRobot
-            | cellType == Robot  = [cell]
-            | otherwise = []
-       in possibleRobot ++ _getAllRobotsCols
+-- _getAllRobotsCols :: Board -> Int -> Int -> Int -> [Cell]
+-- _getAllRobotsCols board colLength row col
+--   | col == colLength = []
+--   | otherwise =
+--       let cell = board !! row !! col
+--           cellType = getCellType cell
+--           possibleRobot
+--             | cellType == Robot  = [cell]
+--             | otherwise = []
+--        in possibleRobot ++ _getAllRobotsCols
 
 
 -- _moveRobots :: Board -> [Cell] -> Board

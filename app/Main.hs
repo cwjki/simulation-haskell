@@ -19,7 +19,7 @@ kids :: Int
 kids = 10
 
 obstacles :: Int
-obstacles = 25
+obstacles = 10
 
 dirt :: Int
 dirt = 1

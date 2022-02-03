@@ -17,7 +17,6 @@ import           Types                          ( Board
                                                     , Robot
                                                     )
                                                 , State (Regular ,WithKid, OnDirt, OnCorral, OnCorrallWithKid)
-                                                , TaskType (GrabKid, Clean)
                                                 , filterByCellType
                                                 , getEmptyAdjacentCells
                                                 , moveObstacles
@@ -78,10 +77,10 @@ generateBoard :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Board
 generateBoard n m robots kids obstacles dirts seed = board  where
     emptyBoard    = generateEmptyBoard n m
     corralBoard   = generateCorrals emptyBoard kids (mkStdGen seed)
-    kidBoard      = generateStuff corralBoard (Kid Regular) kids (mkStdGen (seed + 5))
+    kidBoard      = generateStuff corralBoard Kid kids (mkStdGen (seed + 5))
     obstacleBoard = generateStuff kidBoard Obstacle obstacles (mkStdGen (seed + 103))
     dirtBoard     = generateStuff obstacleBoard Dirt dirts (mkStdGen (seed + 4))
-    board         = generateStuff dirtBoard (Robot Regular (GrabKid, (Empty,(-1,-1))))  robots (mkStdGen (seed + 43))
+    board         = generateStuff dirtBoard Robot robots (mkStdGen (seed + 43))
 
 
 
@@ -99,7 +98,7 @@ generateEmptyRows rows columns row
 generateEmptyColumns :: Int -> Int -> Int -> [Cell]
 generateEmptyColumns columns row column
     | column == columns = []
-    | otherwise = (Empty, (row, column))
+    | otherwise = (Empty, (row, column), Regular, (-1,-1))
     : generateEmptyColumns columns row (column + 1)
 
 
@@ -112,15 +111,15 @@ generateCorrals board corralCount seed
     | null (filterByCellType Corral board)
     = let emptyCells              = filterByCellType Empty board
           (rIndex, newSeed      ) = randomGen 0 (length emptyCells - 1) seed
-          (_     , (row, column)) = emptyCells !! rIndex
-          newBoard                = replaceCell (Corral, (row, column)) board
+          (_     , (row, column), _, _) = emptyCells !! rIndex
+          newBoard                = replaceCell (Corral, (row, column), Regular, (-1,-1)) board
       in  generateCorrals newBoard (corralCount - 1) newSeed
     | otherwise
     = let corralCells             = filterByCellType Corral board
           emptyAdjacentCells      = getEmptyAdjacentCells corralCells board
           (rIndex, newSeed) = randomGen 0 (length emptyAdjacentCells - 1) seed
-          (_     , (row, column)) = emptyAdjacentCells !! rIndex
-          newBoard                = replaceCell (Corral, (row, column)) board
+          (_     , (row, column), _, _) = emptyAdjacentCells !! rIndex
+          newBoard                = replaceCell (Corral, (row, column), Regular, (-1, -1)) board
       in  generateCorrals newBoard (corralCount - 1) newSeed
 
 
@@ -133,15 +132,15 @@ generateStuff board cellType count seed
     | otherwise
     = let emptyCells              = filterByCellType Empty board
           (rIndex, newSeed      ) = randomGen 0 (length emptyCells - 1) seed
-          (_     , (row, column)) = emptyCells !! rIndex
-          newBoard                = replaceCell (cellType, (row, column)) board
+          (_     , (row, column), _, _) = emptyCells !! rIndex
+          newBoard                = replaceCell (cellType, (row, column), Regular, (-1,-1)) board
       in  generateStuff newBoard cellType (count - 1) newSeed
 
 
 --- KIDS 
 moveKids :: Board -> StdGen -> Board
 moveKids board seed = newBoard where
-    kids =  filterByCellType (Kid Regular) board
+    kids =  filterByCellType Kid board
     newBoard = _moveKids board kids seed
 
 
@@ -157,7 +156,7 @@ _moveKids board (kidCell : t) seed =
                     choosenCell = possibleCells !! rIndex
                     boardAux1 -- check if the kid want to move to an empty cell or can push some obstacles
                         | getCellType choosenCell == Empty = 
-                            let boardWithKidMove = replaceCell (Empty, (getCellRow kidCell, getCellColumn kidCell)) (replaceCell (Kid Regular, (getCellRow choosenCell, getCellColumn choosenCell)) board)
+                            let boardWithKidMove = replaceCell (Empty, (getCellRow kidCell, getCellColumn kidCell), Regular, (-1,-1)) (replaceCell (Kid, (getCellRow choosenCell, getCellColumn choosenCell), Regular, (-1,-1)) board)
                              in kidGenerateDirt boardWithKidMove (boardWithKidMove !! getCellRow kidCell !! getCellColumn kidCell) newSeed
                         
                         | getCellType choosenCell == Obstacle =
@@ -180,7 +179,7 @@ _moveKids board (kidCell : t) seed =
 kidGenerateDirt :: Board -> Cell -> StdGen -> Board 
 kidGenerateDirt board kidCell seed = newBoard where
     cells = get9Cells kidCell board
-    kidsCount = length (filterByCellTypeList (Kid Regular) cells)
+    kidsCount = length (filterByCellTypeList Kid cells)
     emptyCells = filterByCellTypeList Empty cells
     emptyCount = length emptyCells
     newBoard = putDirt board emptyCells kidsCount emptyCount seed
@@ -201,8 +200,8 @@ generateDirt board emptyCells dirtCount seed =
             | genDirt == 0 = generateDirt board emptyCells (dirtCount-1) newSeed
             | otherwise = 
                 let (rIndex, newSeed1) = randomGen 0 (length emptyCells -1) newSeed
-                    (cellType, (row, col)) = emptyCells !! rIndex
-                    dirtyBoard = replaceCell (Dirt, (row, col)) board
+                    (cellType, (row, col), _, _) = emptyCells !! rIndex
+                    dirtyBoard = replaceCell (Dirt, (row, col), Regular, (-1,-1)) board
                  in generateDirt dirtyBoard (filterByCellTypeList Empty emptyCells) (dirtCount-1) newSeed1
      in newBoard
 
