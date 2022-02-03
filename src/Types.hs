@@ -1,4 +1,5 @@
 
+
 module Types (
     Board, CellType(Empty, Corral, Kid, Obstacle, Dirt, Robot), Cell,
     State (Regular ,WithKid, OnDirt, OnCorral, OnCorrallWithKid),
@@ -22,23 +23,15 @@ module Types (
 import Debug.Trace
 import System.Random (StdGen)
 import Data.List (sortOn)
-import Data.Graph (path, reachable)
-import Data.Unique (newUnique)
 
 
-
-data CellType = Empty | Kid State | Obstacle | Corral | Dirt | Robot State Task deriving (Eq)
+data CellType = Empty | Kid | Obstacle | Corral | Dirt | Robot deriving (Eq)
 
 data State = Regular | WithKid | OnDirt | OnCorral | OnCorrallWithKid deriving (Eq)
 
-data TaskType = NoTask | GrabKid | Clean deriving Eq
-
 type Position = (Int, Int)
 
-type Cell = (CellType, Position)
-
-type Task = (TaskType, Cell)
-
+type Cell = (CellType, Position, State, Position)
 
 type Board = [[Cell]]
 
@@ -246,10 +239,6 @@ getCellState cell = Regular
 getAllRobotsTargets :: [Cell] -> [Cell]
 getAllRobotsTargets = map getRobotTarget
 
--- movesRobots :: Board -> Board
--- movesRobots board = 
---     let robots = filterByCellType (Robot _) board
---         robotsWithTask = checkRobotsTasks board robots
 
 -- return a list with the Cell and the Distace to all reacheable cells 
 bfsDistance :: Board -> Int -> [Cell] -> [Cell] -> [(Cell, Int)] -> [(Cell, Int)]
@@ -275,7 +264,7 @@ getCellTuple :: Cell -> [(Cell, Int)] -> [(Cell, Int)]
 getCellTuple _ [] = []
 getCellTuple cell (h : t)
     | cell == fst h = [h]
-    | otherwise = getCellTuple cell t 
+    | otherwise = getCellTuple cell t
 
 
 getDistanceTuple :: Int -> [Cell] -> [(Cell, Int)]
@@ -302,6 +291,8 @@ bfsLoop board destinyCell (cell : queue) visited path
 --     | origin == destiny 
 
 
+
+
 getPathTuple :: Cell -> [Cell] -> [(Cell, Cell)]
 getPathTuple _ [] = []
 getPathTuple cell (h : t) = (cell,h) : getPathTuple cell t
@@ -314,6 +305,8 @@ getPossibleWalkCells adjacentCells = possibleCells where
     dirtCells   = filterByCellTypeList Dirt adjacentCells
     corralCells = filterByCellTypeList Corral adjacentCells
     possibleCells = emptyCells ++ dirtCells ++ corralCells
+
+
 
 
 checkRobotsTasks :: Board -> [Cell] -> Board
@@ -331,8 +324,15 @@ checkRobotsTasks board (robot : t) =
      in checkRobotsTasks newBoard t
 
 
-
-
+-- assign a task to all robots 
+computeRobotTasks :: Board -> [Cell] -> Board
+computeRobotTasks board [] = board
+computeRobotTasks board (robot : t) = newBoard where
+    robotTask = getNewRobotTask board robot t
+    row = getCellRow robot
+    col = getCellColumn robot
+    state = getCellState robot
+    newBoard = computeRobotTasks (replaceCell (Robot state robotTask, (row, col)) board) t
 
 getNewRobotTask :: Board -> Cell -> [Cell] -> Task
 getNewRobotTask board robot otherRobots = task where
@@ -367,8 +367,37 @@ _getNonTargetCells cells robots index
             | otherwise = cell : _getNonTargetCells cells robots (index+1)
 
 
+movesRobots :: Board -> Board
+movesRobots board = newBoard where
+    robots = filterByCellType (Robot _ _) board
+    robotsWithTask = computeRobotTasks board robots
+    newBoard = _moveRobots robotsWithTask (filterByCellType (Robot State Task) board)
+
+getAllRobots :: Board -> [Cell]
+getAllRobots board =
+    let rowLength = length board
+        colLength = length (head board)
+     in _getAllRobots board rowLength colLength 0 0
+
+
+_getAllRobotsRows :: Board -> Int -> Int -> Int -> Int -> [Cell]
+_getAllRobotsRows board rowLength colLength row
+    | row == rowLength = []
+    | otherwise = _getAllRobotsCols board colLength row 0 ++ _getAllRobotsRows board rowLength colLength (row+1)
+
+_getAllRobotsCols :: Board -> Int -> Int -> Int -> [Cell]
+_getAllRobotsCols board colLength row col
+  | col == colLength = []
+  | otherwise =
+      let cell = board !! row !! col
+          cellType = getCellType cell
+          possibleRobot
+            | cellType == Robot  = [cell]
+            | otherwise = []
+       in possibleRobot ++ _getAllRobotsCols
+
+
 -- _moveRobots :: Board -> [Cell] -> Board
--- _moveRobots board robots = board
-
-
+-- _moveRobots board _ = board
+-- -- _moverobots board (robot : t) =  
 

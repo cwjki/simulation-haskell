@@ -81,7 +81,7 @@ generateBoard n m robots kids obstacles dirts seed = board  where
     kidBoard      = generateStuff corralBoard (Kid Regular) kids (mkStdGen (seed + 5))
     obstacleBoard = generateStuff kidBoard Obstacle obstacles (mkStdGen (seed + 103))
     dirtBoard     = generateStuff obstacleBoard Dirt dirts (mkStdGen (seed + 4))
-    board         = generateStuff dirtBoard (Robot Regular (GrabKid, (Empty,(0,0))))  robots (mkStdGen (seed + 43))
+    board         = generateStuff dirtBoard (Robot Regular (GrabKid, (Empty,(-1,-1))))  robots (mkStdGen (seed + 43))
 
 
 
@@ -141,7 +141,7 @@ generateStuff board cellType count seed
 --- KIDS 
 moveKids :: Board -> StdGen -> Board
 moveKids board seed = newBoard where
-    kids =  filterByCellType (Kid Regular)  board
+    kids =  filterByCellType (Kid Regular) board
     newBoard = _moveKids board kids seed
 
 
