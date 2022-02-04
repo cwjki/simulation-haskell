@@ -27,6 +27,7 @@ import           Types                          ( Board
                                                 , getCellColumn
                                                 , getCellType
                                                 , getFirtsEmptyCell, getAllAdjacentCells, filterByCellTypeList, get9Cells
+                                                , movesRobots
                                                 )
 import           Utils                          ( printBoard
                                                 , randomGen
@@ -50,6 +51,15 @@ simulate n m robots kids obstacles dirt seed = do
         mKids6 = moveKids mKids5 (mkStdGen (seed + 9))
         mKids7 = moveKids mKids6 (mkStdGen (seed + 99))
         mKids8 = moveKids mKids7 (mkStdGen (seed + 56))
+
+        mRobot1 = movesRobots mKids8
+        mRobot2 = movesRobots mRobot1
+        mRobot3 = movesRobots mRobot2
+        mRobot4 = movesRobots mRobot3
+        mRobot5 = movesRobots mRobot4
+        mRobot6 = movesRobots mRobot5        
+
+
     printBoard board
     
     print "Movimiento 1"
@@ -68,6 +78,19 @@ simulate n m robots kids obstacles dirt seed = do
     printBoard mKids7
     print "Movimiento 8"
     printBoard mKids8
+
+    print "Movimiento 9 Robot"
+    printBoard mRobot1
+    print "Movimiento 10"
+    printBoard mRobot2
+    print "Movimiento 11"
+    printBoard mRobot3
+    print "Movimiento 12"
+    printBoard mRobot4
+    print "Movimiento 13"
+    printBoard mRobot5
+    print "Movimiento 14"
+    printBoard mRobot6
 
 
 
