@@ -1,6 +1,6 @@
 module Types (
     Board, CellType(Empty, Corral, Kid, Obstacle, Dirt, Robot), Cell,
-    State (Regular ,WithKid, OnDirt, OnCorral, OnCorrallWithKid),
+    State (Regular ,WithKid, OnDirt, OnCorral, OnCorralWithKid),
     filterByCellType,
     filterByCellTypeList,
     getEmptyAdjacentCells,
@@ -25,7 +25,7 @@ import Data.List (sortOn)
 
 data CellType = Empty | Kid | Obstacle | Corral | Dirt | Robot deriving (Eq)
 
-data State = Regular | WithKid | OnDirt | OnCorral | OnCorrallWithKid deriving (Eq)
+data State = Regular | WithKid | OnDirt | OnCorral | OnCorralWithKid deriving (Eq)
 
 type Position = (Int, Int)
 
@@ -47,7 +47,7 @@ instance Show State where
   show WithKid = "withkid"
   show OnDirt = "ondirt"
   show OnCorral = "oncorral"
-  show OnCorrallWithKid = "oncorralwithkid"
+  show OnCorralWithKid = "oncorralwithkid"
 
 
 -- Cell
@@ -377,14 +377,14 @@ checkRobotsTasks board (robot : t) =
 
 --assign a task to all robots 
 computeRobotTasks :: Board -> [Cell] -> Board
-computeRobotTasks board t = foldl getNewRobotTask board t
+computeRobotTasks = foldl getNewRobotTask
 
 -- assign a new target to a robot
 getNewRobotTask :: Board -> Cell -> Board
 getNewRobotTask board robot = newBoard where
     kids = filterByCellType Kid board
     dirt = filterByCellType Dirt board
-    allDistancesAux = bfsDistance board  [(robot,0)] [] []
+    allDistancesAux = bfsDistance board [(robot,0)] [] []
     allDistances = bfsDistanceKidsPatch board kids allDistancesAux
     allRobots = filterByCellType Robot board
     nonTargetKids = getNonTargetCells board kids allRobots
@@ -395,7 +395,7 @@ getNewRobotTask board robot = newBoard where
     actualTargetCellRow  = getCellTargetRow robot
     actualTargetCellCol  = getCellTargetCol robot
     -- to compare to the actual target
-    betterDistance 
+    betterDistance
         | actualTargetCellRow == -1 || actualTargetCellCol == -1 = 10000
         | otherwise = distanceAux where
             actualTarget = board !! actualTargetCellRow !! actualTargetCellCol
@@ -404,13 +404,15 @@ getNewRobotTask board robot = newBoard where
                         | otherwise = 10000
 
     newBoard
+     | getCellState robot == WithKid = board
+     | getCellState robot == OnDirt && (actualTargetCellRow, actualTargetCellCol) == getPosition robot = board
      | not (null reachableKids) =
         let sortedTarget = sortOn snd reachableKids
             target    = fst (head sortedTarget)
             distance  = snd (head sortedTarget)
-            rowTarget 
+            rowTarget
                 | distance < betterDistance = getCellRow target
-                | otherwise = actualTargetCellRow                 
+                | otherwise = actualTargetCellRow
             colTarget
                 | distance < betterDistance = getCellColumn target
                 | otherwise = actualTargetCellCol
@@ -422,15 +424,15 @@ getNewRobotTask board robot = newBoard where
      | not (null reachableDirts) =
         let sortedTarget = sortOn snd reachableDirts
 
-            actualTargetCellType 
+            actualTargetCellType
                 | actualTargetCellRow == -1 || actualTargetCellCol == -1 = Empty
                 | otherwise = getCellType (board !! actualTargetCellRow !! actualTargetCellCol)
 
             target = fst (head sortedTarget)
             distance  = snd (head sortedTarget)
-            rowTarget 
+            rowTarget
                 | distance < betterDistance && actualTargetCellType /= Kid = getCellRow target
-                | otherwise = actualTargetCellRow                 
+                | otherwise = actualTargetCellRow
             colTarget
                 | distance < betterDistance && actualTargetCellType /= Kid = getCellColumn target
                 | otherwise = actualTargetCellCol
@@ -459,7 +461,7 @@ _getNonTargetCells board cells robots index
 movesRobots :: Board -> Board
 movesRobots board = newBoard where
     robots = trace ("DEBUG: ROBOT ANTES" ++ show (filterByCellType Robot board)) filterByCellType Robot board
-    boardWithTask = computeRobotTasks board robots  
+    boardWithTask = computeRobotTasks board robots
     newBoard = _moveRobots boardWithTask (trace ("DEBUG: ROBOT Despues" ++ show (filterByCellType Robot boardWithTask)) filterByCellType Robot boardWithTask)
 
 
@@ -470,6 +472,7 @@ _moveRobots board (robot : t) = newBoard where
     targetCol = getCellTargetCol robot
     nextBoard
         | targetRow == -1 && targetCol == -1 = board
+        | (targetRow, targetCol) == getPosition robot = cleanCell board robot 
         | otherwise = newBoard1 where
             targetCell = board !! targetRow !! targetCol
             bfs = bfsLoop board targetCell [robot] [] []
@@ -483,6 +486,12 @@ _moveRobots board (robot : t) = newBoard where
                         | targetCell == nextCell = completeTask board robot targetCell
                         | otherwise = robotWalk board robot nextCell
     newBoard = _moveRobots nextBoard t
+
+
+cleanCell :: Board -> Cell -> Board 
+cleanCell board robot = newBoard where
+    position = getPosition robot
+    newBoard = replaceCell (Robot, position, Regular, (-1,-1)) board 
 
 
 robotWalk :: Board -> Cell -> Cell -> Board
@@ -502,6 +511,7 @@ robotWalk board robot targetCell = newBoard where
         | otherwise = Empty
     newRobotState
         | targetCellType == Corral = OnCorral
+        | targetCellType == Corral && robotState == WithKid = OnCorralWithKid
         | targetCellType == Dirt = OnDirt
         | otherwise = Regular
 
@@ -510,7 +520,57 @@ robotWalk board robot targetCell = newBoard where
 
 
 completeTask :: Board -> Cell -> Cell -> Board
-completeTask board robot targetCell = board
+completeTask board robot targetCell = newBoard where
+    robotRow = getCellRow robot
+    robotCol = getCellColumn robot
+    robotState = getCellState robot
+    robotTargetRow = getCellTargetRow robot
+    robotTargetCol = getCellTargetCol robot
+    targetRow = getCellRow targetCell
+    targetCol = getCellColumn targetCell
+    targetCellType = getCellType targetCell
+
+    oldRobotCellType
+      | robotState == OnCorral = Corral
+      | robotState == OnDirt = Dirt
+      | otherwise = Empty
+
+    newRobotState
+      | targetCellType == Corral = OnCorral
+      | targetCellType == Dirt = OnDirt
+      | targetCellType == Kid = WithKid
+      | otherwise = Regular
+
+    boardAux = replaceCell(oldRobotCellType, (robotRow,robotCol), Regular, (-1, -1)) board
+    newBoard
+        | targetCellType == Corral = replaceCell(Robot, (targetRow, targetCol), newRobotState, (-1, -1)) boardAux
+        | targetCellType == Dirt   = replaceCell(Robot, (targetRow, targetCol), newRobotState, (targetRow, targetCol)) boardAux
+        | targetCellType == Kid    = replaceCell(Robot, (targetRow, targetCol), newRobotState, getCorralTarget boardAux robot) boardAux
+        | otherwise = boardAux
+
+
+getCorralTarget :: Board -> Cell -> (Int, Int)
+getCorralTarget board robot = (targetRow, targetCol) where
+    corrals = filterByCellType Corral board
+    emptyCorrals = getEmptyCorrals corrals
+    allDistances = bfsDistance board [(robot,0)] [] []
+    reachableCorrals = filterByReachable emptyCorrals allDistances
+
+    corralTarget
+        | not (null reachableCorrals) = fst (head (sortOn snd reachableCorrals))
+        | otherwise = robot
+
+    (targetRow, targetCol) = (getCellRow corralTarget, getCellColumn corralTarget)
+
+
+
+
+
+getEmptyCorrals :: [Cell] -> [Cell]
+getEmptyCorrals [] = []
+getEmptyCorrals (corral : t)
+    | getCellState corral == Regular = corral : getEmptyCorrals t
+    | otherwise = getEmptyCorrals t
 
 
 -- getAllRobots :: Board -> [Cell]

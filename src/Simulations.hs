@@ -16,7 +16,7 @@ import           Types                          ( Board
                                                     , Obstacle
                                                     , Robot
                                                     )
-                                                , State (Regular ,WithKid, OnDirt, OnCorral, OnCorrallWithKid)
+                                                , State (Regular ,WithKid, OnDirt, OnCorral, OnCorralWithKid)
                                                 , filterByCellType
                                                 , getEmptyAdjacentCells
                                                 , moveObstacles
