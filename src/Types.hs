@@ -231,19 +231,6 @@ getFirtsEmptyCell board (cellType, (row, column), state, targetPos) dirRow dirCo
 
 
 
--- -- return a list with the Cell and the Distace to all reacheable cells 
--- bfsDistance :: Board -> Int -> [Cell] -> [Cell] -> [(Cell, Int)] -> [(Cell, Int)]
--- bfsDistance _ _ [] _ allDistances = allDistances
--- bfsDistance board count (cell : queue) visited allDistances
---     | cell `elem` visited = bfsDistance board count queue visited allDistances
---     | otherwise = newAllDistances where
---         adjacentCells   = getAdjacentCells cell board
---         possibleCells   = getPossibleWalkCells adjacentCells
---         newQueue        = queue ++ possibleCells
---         newVisited      = visited ++ [cell]
---         tuples          = getDistanceTuple count possibleCells
---         newAllDistances = bfsDistance board (count+1) newQueue newVisited (allDistances ++ tuples)
-
 -- return a list with the Cell and the Distace to all reacheable cells
 bfsDistance :: Board -> [(Cell, Int)] -> [Cell] -> [(Cell, Int)] -> [(Cell, Int)]
 bfsDistance _ [] _ allDistances = allDistances
