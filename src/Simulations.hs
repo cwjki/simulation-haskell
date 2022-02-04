@@ -1,5 +1,5 @@
 module Simulations
-    ( simulate
+    ( startSimulation
     ) where
 
 import           Debug.Trace
@@ -35,64 +35,22 @@ import           Utils                          ( printBoard
                                                 )
 
 
--- TO DEBUG
--- trace ("DEBUG: bobreverse" ++ show x)
 
-
-
-simulate :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> IO ()
-simulate n m robots kids obstacles dirt seed = do
+startSimulation ::  Int ->Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> IO ()
+startSimulation n m robots kids obstacles dirt seed t k = do
     let board = generateBoard n m robots kids obstacles dirt seed
-        mKids1 = moveKids board (mkStdGen (seed + 4))
-        mKids2 = moveKids mKids1 (mkStdGen (seed + 5))
-        mKids3 = moveKids mKids2 (mkStdGen (seed + 6))
-        mKids4 = moveKids mKids3 (mkStdGen (seed + 7))
-        mKids5 = moveKids mKids4 (mkStdGen (seed + 8))
-        mKids6 = moveKids mKids5 (mkStdGen (seed + 9))
-        mKids7 = moveKids mKids6 (mkStdGen (seed + 99))
-        mKids8 = moveKids mKids7 (mkStdGen (seed + 56))
-
-        mRobot1 = movesRobots mKids8
-        mRobot2 = movesRobots mRobot1
-        mRobot3 = movesRobots mRobot2
-        mRobot4 = movesRobots mRobot3
-        mRobot5 = movesRobots mRobot4
-        mRobot6 = movesRobots mRobot5        
+     in mainLoop board 0 t k seed
 
 
-    printBoard board
-    
-    print "Movimiento 1"
-    printBoard mKids1
-    print "Movimiento 2"
-    printBoard mKids2
-    print "Movimiento 3"
-    printBoard mKids3
-    print "Movimiento 4"
-    printBoard mKids4
-    print "Movimiento 5"
-    printBoard mKids5
-    print "Movimiento 6"
-    printBoard mKids6
-    print "Movimiento 7"
-    printBoard mKids7
-    print "Movimiento 8"
-    printBoard mKids8
-
-    print "Movimiento 9 Robot"
-    printBoard mRobot1
-    print "Movimiento 10"
-    printBoard mRobot2
-    print "Movimiento 11"
-    printBoard mRobot3
-    print "Movimiento 12"
-    printBoard mRobot4
-    print "Movimiento 13"
-    printBoard mRobot5
-    print "Movimiento 14"
-    printBoard mRobot6
-
-
+mainLoop :: Board -> Int -> Int -> Int -> Int -> IO ()
+mainLoop board turn t k seed 
+    | turn == k = putStrLn "Fin"
+    |otherwise = do
+        putStrLn $ "Turno " ++ show turn
+        printBoard board
+        let kidsMoves = moveKids board (mkStdGen (seed+turn))
+            newBoard = movesRobots kidsMoves
+         in mainLoop newBoard (turn+1) t k seed
 
 
 

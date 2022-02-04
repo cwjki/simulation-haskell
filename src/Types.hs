@@ -460,9 +460,9 @@ _getNonTargetCells board cells robots index
 
 movesRobots :: Board -> Board
 movesRobots board = newBoard where
-    robots = trace ("DEBUG: ROBOT ANTES" ++ show (filterByCellType Robot board)) filterByCellType Robot board
+    robots = filterByCellType Robot board
     boardWithTask = computeRobotTasks board robots
-    newBoard = _moveRobots boardWithTask (trace ("DEBUG: ROBOT Despues" ++ show (filterByCellType Robot boardWithTask)) filterByCellType Robot boardWithTask)
+    newBoard = _moveRobots boardWithTask (filterByCellType Robot boardWithTask)
 
 
 _moveRobots :: Board -> [Cell] -> Board
@@ -472,14 +472,22 @@ _moveRobots board (robot : t) = newBoard where
     targetCol = getCellTargetCol robot
     nextBoard
         | targetRow == -1 && targetCol == -1 = board
-        | (targetRow, targetCol) == getPosition robot = cleanCell board robot 
+        | (targetRow, targetCol) == getPosition robot = cleanCell board robot
         | otherwise = newBoard1 where
             targetCell = board !! targetRow !! targetCol
             bfs = bfsLoop board targetCell [robot] [] []
             path = getPath robot targetCell bfs [targetCell]
             robotState = getCellState robot
             newBoard1
-                | robotState == WithKid = board
+                | robotState == WithKid =
+                    let nextCell
+                            | length path > 2 = path !! 2
+                            | otherwise = path !! 1
+                        newBoard3
+                            | targetCell == nextCell = completeTask board robot targetCell
+                            | otherwise = robotWalk board robot nextCell
+                     in newBoard3
+
                 | otherwise = newBoard2 where
                     nextCell = path !! 1
                     newBoard2
@@ -488,10 +496,10 @@ _moveRobots board (robot : t) = newBoard where
     newBoard = _moveRobots nextBoard t
 
 
-cleanCell :: Board -> Cell -> Board 
+cleanCell :: Board -> Cell -> Board
 cleanCell board robot = newBoard where
     position = getPosition robot
-    newBoard = replaceCell (Robot, position, Regular, (-1,-1)) board 
+    newBoard = replaceCell (Robot, position, Regular, (-1,-1)) board
 
 
 robotWalk :: Board -> Cell -> Cell -> Board
@@ -507,15 +515,21 @@ robotWalk board robot targetCell = newBoard where
 
     oldRobotCellType
         | robotState == OnCorral = Corral
+        | robotState == OnCorralWithKid = Corral
         | robotState == OnDirt = Dirt
         | otherwise = Empty
+    
+    oldRobotState 
+        | robotState == OnCorralWithKid = WithKid
+        | otherwise = Regular
+
     newRobotState
         | targetCellType == Corral = OnCorral
         | targetCellType == Corral && robotState == WithKid = OnCorralWithKid
         | targetCellType == Dirt = OnDirt
         | otherwise = Regular
 
-    boardAux = replaceCell (oldRobotCellType, (robotRow, robotCol), Regular, (-1, -1)) board
+    boardAux = replaceCell (oldRobotCellType, (robotRow, robotCol), oldRobotState, (-1, -1)) board
     newBoard = replaceCell (Robot, (targetRow, targetCol), newRobotState, (robotTargetRow, robotTargetCol)) boardAux
 
 
@@ -536,7 +550,7 @@ completeTask board robot targetCell = newBoard where
       | otherwise = Empty
 
     newRobotState
-      | targetCellType == Corral = OnCorral
+      | targetCellType == Corral = OnCorralWithKid
       | targetCellType == Dirt = OnDirt
       | targetCellType == Kid = WithKid
       | otherwise = Regular
@@ -571,31 +585,5 @@ getEmptyCorrals [] = []
 getEmptyCorrals (corral : t)
     | getCellState corral == Regular = corral : getEmptyCorrals t
     | otherwise = getEmptyCorrals t
-
-
--- getAllRobots :: Board -> [Cell]
--- getAllRobots board =
---     let rowLength = length board
---         colLength = length (head board)
---      in _getAllRobots board rowLength colLength 0 0
-
-
--- _getAllRobotsRows :: Board -> Int -> Int -> Int -> Int -> [Cell]
--- _getAllRobotsRows board rowLength colLength row
---     | row == rowLength = []
---     | otherwise = _getAllRobotsCols board colLength row 0 ++ _getAllRobotsRows board rowLength colLength (row+1)
-
--- _getAllRobotsCols :: Board -> Int -> Int -> Int -> [Cell]
--- _getAllRobotsCols board colLength row col
---   | col == colLength = []
---   | otherwise =
---       let cell = board !! row !! col
---           cellType = getCellType cell
---           possibleRobot
---             | cellType == Robot  = [cell]
---             | otherwise = []
---        in possibleRobot ++ _getAllRobotsCols
-
-
 
 

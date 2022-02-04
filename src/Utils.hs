@@ -53,11 +53,11 @@ drawRow ((Dirt, (_, _), _, _) : t) = do
 drawRow ((Obstacle , (_, _), _, _) : t) = do
   putStr "[ O ]"
   drawRow t
+drawRow ((Corral, (_, _), WithKid, _) : t) = do
+  putStr "[CK ]"
+  drawRow t
 drawRow ((Corral, (_, _), _, _) : t) = do
   putStr "[ C ]"
-  drawRow t
-drawRow ((Kid, (_, _), OnCorral, _) : t) = do
-  putStr "[KC ]"
   drawRow t
 drawRow ((Kid, (_, _), _, _) : t) = do
   putStr "[ K ]"
@@ -75,5 +75,5 @@ drawRow ((Robot, (_, _), OnCorral, _) : t) = do
   putStr "[RC ]"
   drawRow t
 drawRow ((Robot, (_, _), OnCorralWithKid, _) : t) = do
-  putStr "[RKC ]"
+  putStr "[RKC]"
   drawRow t

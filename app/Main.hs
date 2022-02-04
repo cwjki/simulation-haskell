@@ -1,6 +1,6 @@
 module Main where
 
-import Simulations (simulate)
+import Simulations (startSimulation)
 import System.Random (mkStdGen)
 import Utils (randomGen)
 
@@ -12,20 +12,27 @@ n = 10
 m :: Int
 m = 9
 
+t :: Int  -- the world changes every t units of time
+t = 30
+
+k :: Int -- total of turn of the simulation
+k = 50
+
 robots :: Int
-robots = 5
+robots = 3
 
 kids :: Int
-kids = 3
+kids = 8
 
 obstacles :: Int
-obstacles = 1
+obstacles = 6
 
 dirt :: Int
 dirt = 0
 
 seed :: Int
 seed = 49
+
 
 
 
@@ -37,4 +44,4 @@ main = do
     putStrLn "---------------------------------------------------------------------------------------"
     putStrLn ""
 
-    simulate n m robots kids obstacles dirt seed
+    startSimulation n m robots kids obstacles dirt seed t k
