@@ -5,7 +5,7 @@ module Utils
     ) where
 
 import System.Random ( Random(randomR), StdGen )
-import Types ( Board, CellType (Dirt, Empty, Obstacle, Corral, Kid, Robot), Cell, State (Regular, WithKid, OnCorral, OnDirt, OnCorralWithKid) )
+import Types ( Board, CellType (Dirt, Empty, Obstacle, Corral, Kid, Robot), Cell, State (Regular, WithKid, OnCorral, OnDirt, OnCorralWithKid, OnDirtWithKid) )
 
 
 randomGen :: Int -> Int -> StdGen -> (Int, StdGen)
@@ -76,4 +76,7 @@ drawRow ((Robot, (_, _), OnCorral, _) : t) = do
   drawRow t
 drawRow ((Robot, (_, _), OnCorralWithKid, _) : t) = do
   putStr "[RKC]"
+  drawRow t
+drawRow ((Robot, (_, _), OnDirtWithKid , _) : t) = do
+  putStr "[RKD]"
   drawRow t

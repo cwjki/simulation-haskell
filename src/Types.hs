@@ -1,6 +1,6 @@
 module Types (
     Board, CellType(Empty, Corral, Kid, Obstacle, Dirt, Robot), Cell,
-    State (Regular ,WithKid, OnDirt, OnCorral, OnCorralWithKid),
+    State (Regular ,WithKid, OnDirt, OnCorral, OnCorralWithKid, OnDirtWithKid),
     filterByCellType,
     filterByCellTypeList,
     getEmptyAdjacentCells,
@@ -25,7 +25,7 @@ import Data.List (sortOn)
 
 data CellType = Empty | Kid | Obstacle | Corral | Dirt | Robot deriving (Eq)
 
-data State = Regular | WithKid | OnDirt | OnCorral | OnCorralWithKid deriving (Eq)
+data State = Regular | WithKid | OnDirt | OnCorral | OnCorralWithKid | OnDirtWithKid deriving (Eq)
 
 type Position = (Int, Int)
 
@@ -48,6 +48,7 @@ instance Show State where
   show OnDirt = "ondirt"
   show OnCorral = "oncorral"
   show OnCorralWithKid = "oncorralwithkid"
+  show OnDirtWithKid = "ondirtWithKid"
 
 
 -- Cell
@@ -296,9 +297,10 @@ getPossibleWalkCells1 adjacentCells destinyCell = possibleCells where
     emptyCells = filterByCellTypeList Empty adjacentCells
     dirtCells = filterByCellTypeList Dirt adjacentCells
     corralCells = filterByCellTypeList Corral adjacentCells
+    emptyCorrals = getEmptyCorrals corralCells
     possibleCells
-        | destinyCell `elem` adjacentCells = emptyCells ++ dirtCells ++ corralCells ++ [destinyCell]
-        | otherwise = emptyCells ++ dirtCells ++ corralCells
+        | destinyCell `elem` adjacentCells = emptyCells ++ dirtCells ++ emptyCorrals ++ [destinyCell]
+        | otherwise = emptyCells ++ dirtCells ++ emptyCorrals
 
 -- return the path to the targetCell
 getPath :: Cell -> Cell -> [(Cell, Cell)] -> [Cell] -> [Cell]
@@ -331,7 +333,10 @@ getPossibleWalkCells adjacentCells = possibleCells where
     emptyCells  = filterByCellTypeList Empty adjacentCells
     dirtCells   = filterByCellTypeList Dirt adjacentCells
     corralCells = filterByCellTypeList Corral adjacentCells
-    possibleCells = emptyCells ++ dirtCells ++ corralCells
+    emptyCorrals = getEmptyCorrals corralCells
+    possibleCells = emptyCells ++ dirtCells ++ emptyCorrals
+
+
 
 
 -- Robots Logic
@@ -382,6 +387,7 @@ getNewRobotTask board robot = newBoard where
     actualTargetCellRow  = getCellTargetRow robot
     actualTargetCellCol  = getCellTargetCol robot
     -- to compare to the actual target
+
     betterDistance
         | actualTargetCellRow == -1 || actualTargetCellCol == -1 = 10000
         | otherwise = distanceAux where
@@ -457,16 +463,27 @@ _moveRobots board [] = board
 _moveRobots board (robot : t) = newBoard where
     targetRow = getCellTargetRow robot
     targetCol = getCellTargetCol robot
-    nextBoard
+    robotState = getCellState robot
+    nextBoard 
+        -- si no tiene tarea asignada
         | targetRow == -1 && targetCol == -1 = board
+
+        -- si no existe camino hasta ningun corral, tratar de obtener un path en cada turno, esperando al cambio 
+        -- aleatorio en el ambiente
+        | (targetRow, targetCol) == getPosition robot && (robotState == WithKid || robotState == OnDirtWithKid || robotState == OnCorralWithKid) =
+            let (rowTarget, colTarget) = getCorralTarget board robot
+             in replaceCell (Robot, (getCellRow robot, getCellColumn robot), robotState, (rowTarget, colTarget)) board  
+
+        --si estas en tu casilla objetivo y te toca limpiar 
         | (targetRow, targetCol) == getPosition robot = cleanCell board robot
+
         | otherwise = newBoard1 where
             targetCell = board !! targetRow !! targetCol
             bfs = bfsLoop board targetCell [robot] [] []
             path = getPath robot targetCell bfs [targetCell]
             robotState = getCellState robot
             newBoard1
-                | robotState == WithKid =
+                |   robotState == WithKid || robotState == OnDirtWithKid || robotState == OnCorralWithKid =
                     let nextCell
                             | length path > 2 = path !! 2
                             | otherwise = path !! 1
@@ -499,25 +516,165 @@ robotWalk board robot targetCell = newBoard where
     targetRow = getCellRow targetCell
     targetCol = getCellColumn targetCell
     targetCellType = getCellType targetCell
+    targetState = getCellState targetCell
 
-    oldRobotCellType
-        | robotState == OnCorral = Corral
-        | robotState == OnCorralWithKid = Corral
-        | robotState == OnDirt = Dirt
-        | otherwise = Empty
-    
-    oldRobotState 
-        | robotState == OnCorralWithKid = WithKid
-        | otherwise = Regular
-
-    newRobotState
-        | targetCellType == Corral = OnCorral
-        | targetCellType == Corral && robotState == WithKid = OnCorralWithKid
-        | targetCellType == Dirt = OnDirt
-        | otherwise = Regular
+    newRobotState    = getNewRobotState targetCellType robotState
+    oldRobotState    = getOldRobotState targetCellType robotState
+    oldRobotCellType = getOldRobotCellType targetCellType robotState
 
     boardAux = replaceCell (oldRobotCellType, (robotRow, robotCol), oldRobotState, (-1, -1)) board
     newBoard = replaceCell (Robot, (targetRow, targetCol), newRobotState, (robotTargetRow, robotTargetCol)) boardAux
+
+
+
+getNewRobotState :: CellType -> State -> State
+getNewRobotState targetCellType robotState =
+    let newRobotState
+            | robotState == Regular && targetCellType == Empty = Regular
+            | robotState == Regular && targetCellType == Kid = WithKid
+            | robotState == Regular && targetCellType == Corral = OnCorral
+            | robotState == Regular && targetCellType == Dirt = OnDirt
+            | robotState == WithKid && targetCellType == Empty = WithKid
+            | robotState == WithKid && targetCellType == Corral = OnCorralWithKid
+            | robotState == WithKid && targetCellType == Dirt = OnDirtWithKid
+            | robotState == OnCorral && targetCellType == Empty = Regular
+            | robotState == OnCorral && targetCellType == Kid = WithKid
+            | robotState == OnCorral && targetCellType == Corral = OnCorral
+            | robotState == OnCorral && targetCellType == Dirt = OnDirt
+            | robotState == OnDirt && targetCellType == Empty = Regular
+            | robotState == OnDirt && targetCellType == Kid = WithKid
+            | robotState == OnDirt && targetCellType == Corral = OnCorral
+            | robotState == OnDirt && targetCellType == Dirt = OnDirt
+            | robotState == OnCorralWithKid && targetCellType == Empty = Regular
+            | robotState == OnCorralWithKid && targetCellType == Kid = WithKid
+            | robotState == OnCorralWithKid && targetCellType == Corral = OnCorral
+            | robotState == OnCorralWithKid && targetCellType == Dirt = OnDirt
+            | robotState == OnDirtWithKid && targetCellType == Empty = WithKid
+            | robotState == OnDirtWithKid && targetCellType == Corral = OnCorralWithKid
+            | robotState == OnDirtWithKid && targetCellType == Dirt = OnDirtWithKid
+            | otherwise = Regular
+     in newRobotState
+
+
+getOldRobotCellType :: CellType -> State -> CellType
+getOldRobotCellType targetCellType robotState =
+  let oldRobotCellType
+        | robotState == Regular && targetCellType == Empty = Empty
+        | robotState == Regular && targetCellType == Kid = Empty
+        | robotState == Regular && targetCellType == Corral = Empty
+        | robotState == Regular && targetCellType == Dirt = Empty
+
+        | robotState == WithKid && targetCellType == Empty = Empty
+        | robotState == WithKid && targetCellType == Corral = Empty
+        | robotState == WithKid && targetCellType == Dirt = Empty
+
+        | robotState == OnCorral && targetCellType == Empty = Corral
+        | robotState == OnCorral && targetCellType == Kid = Corral
+        | robotState == OnCorral && targetCellType == Corral = Corral
+        | robotState == OnCorral && targetCellType == Dirt = Corral
+
+        | robotState == OnDirt && targetCellType == Empty = Dirt
+        | robotState == OnDirt && targetCellType == Kid = Dirt
+        | robotState == OnDirt && targetCellType == Corral = Dirt
+        | robotState == OnDirt && targetCellType == Dirt = Dirt
+
+        | robotState == OnCorralWithKid && targetCellType == Empty = Corral
+        | robotState == OnCorralWithKid && targetCellType == Kid = Corral
+        | robotState == OnCorralWithKid && targetCellType == Corral = Corral
+        | robotState == OnCorralWithKid && targetCellType == Dirt = Corral
+
+        | robotState == OnDirtWithKid && targetCellType == Empty = Dirt
+        | robotState == OnDirtWithKid && targetCellType == Kid = Dirt
+        | robotState == OnDirtWithKid && targetCellType == Corral = Dirt
+        | robotState == OnDirtWithKid && targetCellType == Dirt = Dirt
+        | otherwise = Empty
+   in oldRobotCellType
+
+getOldRobotState :: CellType -> State -> State
+getOldRobotState targetCellType robotState =
+  let oldRobotState
+        | robotState == Regular && targetCellType == Empty = Regular
+        | robotState == Regular && targetCellType == Kid = Regular
+        | robotState == Regular && targetCellType == Corral = Regular
+        | robotState == Regular && targetCellType == Dirt = Regular
+
+        | robotState == WithKid && targetCellType == Empty = Regular
+        | robotState == WithKid && targetCellType == Corral = Regular
+        | robotState == WithKid && targetCellType == Dirt = Regular
+
+        | robotState == OnCorral && targetCellType == Empty = Regular
+        | robotState == OnCorral && targetCellType == Kid = Regular
+        | robotState == OnCorral && targetCellType == Corral = Regular
+        | robotState == OnCorral && targetCellType == Dirt = Regular
+
+        | robotState == OnDirt && targetCellType == Empty = Regular
+        | robotState == OnDirt && targetCellType == Kid = Regular
+        | robotState == OnDirt && targetCellType == Corral = Regular
+        | robotState == OnDirt && targetCellType == Dirt = Regular
+
+        | robotState == OnCorralWithKid && targetCellType == Empty = WithKid
+        | robotState == OnCorralWithKid && targetCellType == Kid = WithKid
+        | robotState == OnCorralWithKid && targetCellType == Corral = WithKid
+        | robotState == OnCorralWithKid && targetCellType == Dirt = WithKid
+
+        | robotState == OnDirtWithKid && targetCellType == Empty = Regular
+        | robotState == OnDirtWithKid && targetCellType == Kid = Regular
+        | robotState == OnDirtWithKid && targetCellType == Corral = Regular
+        | robotState == OnDirtWithKid && targetCellType == Dirt = Regular
+        | otherwise = Regular
+   in oldRobotState
+
+
+    -- newRobotState 
+    --     | (robotState == WithKid || robotState == OnDirtWithKid) 
+    --         && (targetCellType == Empty) = WithKid
+    --     | (robotState == WithKid || robotState == OnDirtWithKid)
+    --         && (targetCellType == Corral) = OnCorralWithKid
+    --     | (robotState == WithKid || robotState == OnDirtWithKid)
+    --         && (targetCellType == Dirt) = OnDirtWithKid
+    --     | (robotState == OnCorralWithKid) && (targetCellType == Empty ) = Regular 
+    --     | (robotState == OnCorralWithKid) && (targetCellType == Dirt ) = OnDirt
+    --     | (robotState == OnCorralWithKid) && (targetCellType == Corral ) = OnCorral
+    --     | robotState == OnCorral && targetCellType == Corral = OnCorral 
+    --     | otherwise = targetState
+
+
+    -- oldRobotCellType 
+    --     | robotState == OnDirt = Dirt
+    --     | robotState == Regular = Empty
+    --     | robotState == OnCorral = Corral
+    --     | robotState == OnCorralWithKid = Corral
+    --     | robotState == OnDirtWithKid = Dirt
+    --     | otherwise = Empty
+    
+
+    -- oldRobotState 
+    --     | robotState == OnCorralWithKid = WithKid
+    --     | robotState == OnDirtWithKid   = WithKid
+    --     | otherwise = Regular
+
+
+    -- oldRobotCellType
+    --     | robotState == OnCorral = Corral
+    --     | robotState == OnCorralWithKid = Corral
+    --     | robotState == OnDirt = Dirt
+    --     | robotState == OnDirtWithKid = Dirt
+    --     | otherwise = Empty
+    
+    -- oldRobotState 
+    --     | robotState == OnCorralWithKid = WithKid
+    --     | robotState == WithKid = WithKid
+    --     | robotState == OnDirtWithKid = WithKid
+    --     | otherwise = robotState
+
+    -- newRobotState
+    --     | targetCellType == Corral = OnCorral
+    --     | targetCellType == Corral && robotState == WithKid = OnCorralWithKid
+    --     | targetCellType == Dirt = OnDirt
+    --     | targetCellType == Dirt && robotState == WithKid = OnDirtWithKid
+    --     | targetCellType == Empty && robotState == WithKid = WithKid
+    --     | otherwise = Regular
+
 
 
 completeTask :: Board -> Cell -> Cell -> Board
@@ -531,23 +688,47 @@ completeTask board robot targetCell = newBoard where
     targetCol = getCellColumn targetCell
     targetCellType = getCellType targetCell
 
-    oldRobotCellType
-      | robotState == OnCorral = Corral
-      | robotState == OnDirt = Dirt
-      | otherwise = Empty
+    newRobotState = getNewRobotState targetCellType robotState
+    oldRobotState = getOldRobotState targetCellType robotState
+    oldRobotCellType = getOldRobotCellType targetCellType robotState
 
-    newRobotState
-      | targetCellType == Corral = OnCorralWithKid
-      | targetCellType == Dirt = OnDirt
-      | targetCellType == Kid = WithKid
-      | otherwise = Regular
-
-    boardAux = replaceCell(oldRobotCellType, (robotRow,robotCol), Regular, (-1, -1)) board
+    boardAux = replaceCell (oldRobotCellType, (robotRow, robotCol), oldRobotState, (-1, -1)) board
     newBoard
-        | targetCellType == Corral = replaceCell(Robot, (targetRow, targetCol), newRobotState, (-1, -1)) boardAux
-        | targetCellType == Dirt   = replaceCell(Robot, (targetRow, targetCol), newRobotState, (targetRow, targetCol)) boardAux
-        | targetCellType == Kid    = replaceCell(Robot, (targetRow, targetCol), newRobotState, getCorralTarget boardAux robot) boardAux
-        | otherwise = boardAux
+      | targetCellType == Corral = replaceCell (Robot, (targetRow, targetCol), newRobotState, (-1, -1)) boardAux
+      | targetCellType == Dirt = replaceCell (Robot, (targetRow, targetCol), newRobotState, (targetRow, targetCol)) boardAux
+      | targetCellType == Kid = replaceCell (Robot, (targetRow, targetCol), newRobotState, getCorralTarget boardAux robot) boardAux
+      | otherwise = boardAux
+
+    -- oldRobotCellType
+    --     | robotState == OnDirt = Dirt
+    --     | robotState == Regular = Empty
+    --     | robotState == OnCorral = Corral
+    --     | robotState == OnCorralWithKid = Corral
+    --     | robotState == OnDirtWithKid = Dirt
+    --     | otherwise = Empty
+
+    -- oldRobotState
+    --     | robotState == OnCorralWithKid = WithKid
+    --     | robotState == OnDirtWithKid = WithKid
+    --     | otherwise = Regular
+
+    -- oldRobotCellType
+    --   | robotState == OnCorral = Corral
+    --   | robotState == OnCorralWithKid = Corral
+    --   | robotState == OnDirt = Dirt
+    --   | otherwise = Empty
+
+    -- oldRobotState
+    --   | robotState == OnCorralWithKid = WithKid
+    --   | otherwise = robotState
+
+    -- newRobotState
+    --   | targetCellType == Corral = OnCorralWithKid
+    --   | targetCellType == Dirt = OnDirt
+    --   | targetCellType == Kid = WithKid
+    --   | otherwise = Regular
+
+    
 
 
 getCorralTarget :: Board -> Cell -> (Int, Int)
@@ -555,15 +736,15 @@ getCorralTarget board robot = (targetRow, targetCol) where
     corrals = filterByCellType Corral board
     emptyCorrals = getEmptyCorrals corrals
     allDistances = bfsDistance board [(robot,0)] [] []
-    reachableCorrals = filterByReachable emptyCorrals allDistances
+    allRobots = filterByCellType Robot board
+    nonTargetCorrals = getNonTargetCells board emptyCorrals allRobots
+    reachableCorrals = filterByReachable nonTargetCorrals allDistances
 
     corralTarget
         | not (null reachableCorrals) = fst (head (sortOn snd reachableCorrals))
         | otherwise = robot
 
     (targetRow, targetCol) = (getCellRow corralTarget, getCellColumn corralTarget)
-
-
 
 
 

@@ -2,37 +2,25 @@ module Simulations
     ( startSimulation
     ) where
 
-import           Debug.Trace
-import           System.Random                  ( StdGen
-                                                , mkStdGen
-                                                )
-import           Types                          ( Board
-                                                , Cell
-                                                , CellType
-                                                    ( Corral
-                                                    , Dirt
-                                                    , Empty
-                                                    , Kid
-                                                    , Obstacle
-                                                    , Robot
-                                                    )
-                                                , State (Regular ,WithKid, OnDirt, OnCorral, OnCorralWithKid)
-                                                , filterByCellType
-                                                , getEmptyAdjacentCells
-                                                , moveObstacles
-                                                , replaceCell
-                                                , replaceCellList
-                                                , getAdjacentCells
-                                                , getCellRow
-                                                , getCellColumn
-                                                , getCellType
-                                                , getFirtsEmptyCell, getAllAdjacentCells, filterByCellTypeList, get9Cells
-                                                , movesRobots
-                                                )
-import           Utils                          ( printBoard
-                                                , randomGen
-
-                                                )
+import Debug.Trace ()
+import System.Random (StdGen, mkStdGen)
+import  Types ( Board,
+                Cell, 
+                CellType( Corral, Dirt, Empty, Kid, Obstacle, Robot),
+                State (Regular ,WithKid, OnDirt, OnCorral, OnCorralWithKid),
+                filterByCellType,
+                getEmptyAdjacentCells,
+                moveObstacles,
+                replaceCell,
+                replaceCellList,
+                getAdjacentCells,
+                getCellRow,
+                getCellColumn,
+                getCellType,
+                getFirtsEmptyCell, getAllAdjacentCells, filterByCellTypeList, get9Cells,
+                movesRobots
+                )
+import Utils ( printBoard, randomGen)
 
 
 

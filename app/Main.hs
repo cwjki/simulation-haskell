@@ -19,7 +19,7 @@ k :: Int -- total of turn of the simulation
 k = 50
 
 robots :: Int
-robots = 3
+robots = 6
 
 kids :: Int
 kids = 8
@@ -28,10 +28,10 @@ obstacles :: Int
 obstacles = 6
 
 dirt :: Int
-dirt = 0
+dirt = 12
 
 seed :: Int
-seed = 49
+seed = 45
 
 
 
