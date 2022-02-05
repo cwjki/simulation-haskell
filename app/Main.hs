@@ -13,7 +13,7 @@ m :: Int
 m = 9
 
 t :: Int  -- the world changes every t units of time
-t = 30
+t = 10
 
 k :: Int -- total of turn of the simulation
 k = 50

@@ -14,7 +14,8 @@ module Types (
     getAdjacentCells,
     getAllAdjacentCells,
     get9Cells,
-    movesRobots
+    movesRobots,
+    getCorralsWithKids
     )
     where
 
@@ -134,6 +135,12 @@ getCellsWithDistances origin (cell : t) =
   let distance = getDistance origin cell
    in (cell, distance) : getCellsWithDistances origin t
 
+
+getCorralsWithKids :: [Cell] -> [Cell]
+getCorralsWithKids [] = []
+getCorralsWithKids (corral : t)
+    | getCellState corral == WithKid = corral : getCorralsWithKids t
+    | otherwise = getCorralsWithKids t 
 
 
 replace :: [a] -> Int -> a -> [a]

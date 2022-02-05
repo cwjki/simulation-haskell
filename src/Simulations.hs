@@ -5,7 +5,7 @@ module Simulations
 import Debug.Trace ()
 import System.Random (StdGen, mkStdGen)
 import  Types ( Board,
-                Cell, 
+                Cell,
                 CellType( Corral, Dirt, Empty, Kid, Obstacle, Robot),
                 State (Regular ,WithKid, OnDirt, OnCorral, OnCorralWithKid),
                 filterByCellType,
@@ -18,7 +18,7 @@ import  Types ( Board,
                 getCellColumn,
                 getCellType,
                 getFirtsEmptyCell, getAllAdjacentCells, filterByCellTypeList, get9Cells,
-                movesRobots
+                movesRobots, getCorralsWithKids
                 )
 import Utils ( printBoard, randomGen)
 
@@ -27,19 +27,37 @@ import Utils ( printBoard, randomGen)
 startSimulation ::  Int ->Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> IO ()
 startSimulation n m robots kids obstacles dirt seed t k = do
     let board = generateBoard n m robots kids obstacles dirt seed
-     in mainLoop board 0 t k seed
+     in mainLoop board 0 t k seed 0
 
 
-mainLoop :: Board -> Int -> Int -> Int -> Int -> IO ()
-mainLoop board turn t k seed 
-    | turn == k = putStrLn "Fin"
+mainLoop :: Board -> Int -> Int -> Int -> Int -> Int -> IO ()
+mainLoop board turn t k seed t2
+    | turn == k = putStrLn "Fin. Se ha terminado la simulación"
+    | moreThenSixty board = putStrLn "FIN. Se ha detenida la simulación por haber alcanzado el % de suciedad."
     |otherwise = do
         putStrLn $ "Turno " ++ show turn
         printBoard board
         let kidsMoves = moveKids board (mkStdGen (seed+turn))
             newBoard = movesRobots kidsMoves
-         in mainLoop newBoard (turn+1) t k seed
+            newT2
+              | t2 == t = 0
+              | otherwise = t2
+            finalBoard 
+                | t2 == t = changeEnviroment newBoard (seed+t)
+                | otherwise = newBoard          
+         in mainLoop finalBoard (turn+1) t k seed (newT2+1)
 
+
+moreThenSixty :: Board -> Bool 
+moreThenSixty board = result where
+    rowLength = length board
+    colLength = length (head board)
+    totalCells = rowLength * colLength
+    dirtyCells =  length (filterByCellType Dirt board)
+    cleanCells = length (filterByCellType Empty board)
+    result 
+        | cleanCells * 100 < dirtyCells * 60 = True 
+        | otherwise = False 
 
 
 generateBoard :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Board
@@ -175,7 +193,37 @@ generateDirt board emptyCells dirtCount seed =
      in newBoard
 
 
--- ROBOTS
+changeEnviroment :: Board -> Int -> Board 
+changeEnviroment board seed = newBoard where 
+    rowLength = length board
+    colLenght = length (head board)
+    totalCells = rowLength * colLenght
+    emptyTotal = length (filterByCellType Empty board)
+    dirtyTotal = min 10 emptyTotal
+
+    (rNum, newSeed) = randomGen 0 dirtyTotal (mkStdGen seed)
+    boardDirt = generateStuff board Dirt dirtyTotal (mkStdGen (seed+301))
+    corrals = filterByCellType Corral boardDirt
+    corralsWithKids = getCorralsWithKids corrals
+    newBoard = freeSomeKids boardDirt corralsWithKids (mkStdGen (seed+53))
+
+freeSomeKids :: Board -> [Cell] -> StdGen -> Board
+freeSomeKids board [] _ = board 
+freeSomeKids board (corral : tail) seed = newBoard where
+    (rChoise, newSeed) = randomGen 0 2 seed
+    newBoard 
+        | rChoise == 1 =
+            let corralPos = (getCellRow corral, getCellColumn corral)
+                boardAux2 = replaceCell (Corral, corralPos, Regular, (-1, -1)) board
+             in generateStuff boardAux2 Kid 1 newSeed
+        | otherwise = board
+    
+    
+            
+
+
+
+
 
 
 
